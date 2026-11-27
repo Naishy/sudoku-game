@@ -12,6 +12,7 @@ import { Telemetry, VERSION } from './telemetry.js';
 import { GIFT, shouldShowGift, markGiftSeen, fromCard } from './gift.js';
 import { drawHeidi } from './cast.js';
 import { drawZiggy, ZIGGY_BOX } from './ziggy.js';
+import { Walker, seatNear } from './walk.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -35,6 +36,7 @@ let screen = 'home';
 function show(name) {
   screen = name;
   for (const s of SCREENS) $(s).classList.toggle('hidden', s !== name);
+  if (name !== 'play') walker?.hide();
   if (name === 'home') { renderHome(); if (updateReady) location.reload(); }
 }
 const modalOpen = () => ['welcome', 'how', 'settings', 'menu', 'install', 'gift'].some((m) => !$(m).classList.contains('hidden'));
@@ -158,6 +160,7 @@ function buildBoard() {
   $('t-hint').onclick = hint;
 }
 buildBoard();
+const walker = new Walker($('ziggy-walk'), $('grid'));
 
 function openPuzzle(key, { daily, day, palette, tutorial = null }) {
   const f = tutorial ? null : fromKey(key);
@@ -312,7 +315,7 @@ function hint() {
   for (let i = 0; i < 81; i++) if (G.values[i] && !G.givens[i] && G.values[i] !== G.solution[i]) wrong.push(i);
   if (!G.tutorial) { G.hints++; save(); }
   if (wrong.length) {
-    G.pending = { stage: 1, wrong, glow: wrong, hl: [] };
+    G.pending = { stage: 1, wrong, glow: wrong, hl: [], seat: seatNear(G.values, G.notes, wrong, new Set(wrong), wrong[0]) };
     say('ziggy', L.mistakeText(wrong.length));
     tel.log('hint', { key: G.key, mistakes: wrong.length });
     render();
@@ -324,7 +327,9 @@ function hint() {
   let hl = [];
   let glow = [target];
   if (h.tech === 'hiddenSingle') { hl = UNITS[h.unit]; glow = []; } else if (h.via) { hl = h.via.cells; }
-  G.pending = { stage: 1, h, hl, glow };
+  // Ziggy sits in an empty square beside the squares the hint is about
+  const region = [...hl, ...glow, target];
+  G.pending = { stage: 1, h, hl, glow, seat: seatNear(G.values, G.notes, region, new Set([...region, target]), target) };
   G.sel = -1; G.digit = 0; // so the hint's squares stand out
   say('ziggy', L.hintText(h));
   tel.log('hint', { key: G.key, tech: h.tech, level: G.level });
@@ -392,6 +397,14 @@ function render() {
   $('t-notes').classList.toggle('on', G.notesMode);
   $('notes-state').textContent = G.notesMode ? 'on' : 'off';
   for (const t of ['t-undo', 't-erase', 't-notes', 't-hint']) $(t).classList.toggle('glow', G.tutorial?.glowTool === t);
+  syncZiggy();
+}
+
+// Ziggy on the grid: beside a hint while it's showing, or the guide's glowing square
+function syncZiggy() {
+  if (!G || G.done || screen !== 'play') { walker.leave(); return; }
+  const seat = G.pending?.seat ?? G.tutorial?.seat ?? -1;
+  if (seat >= 0) walker.sitAt(seat); else walker.leave();
 }
 
 // the grid takes whatever height is left once everything else is laid out
@@ -622,6 +635,7 @@ function coachStep(n) {
   say('ziggy', s.keep ? `${$('say-text').textContent} ${s.text}` : s.text, { coach: !s.keep });
   t.glow = s.glow ?? -1;
   t.glowTool = s.glowTool || null;
+  t.seat = t.glow >= 0 ? seatNear(G.values, G.notes, [t.glow], new Set([t.glow])) : -1;
   render();
   fitGrid();
 }
