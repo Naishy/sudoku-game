@@ -1,0 +1,21 @@
+{
+  "name": "grid-works",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Grid Works: a daily Sudoku for Heidi, where every finished grid becomes a painting",
+  "scripts": {
+    "dev": "wrangler dev",
+    "serve": "python3 -m http.server 8080 --directory public",
+    "test": "node --test test/*.test.mjs",
+    "puzzles": "node tools/make-puzzles.mjs",
+    "icons": "node tools/make-icons.mjs",
+    "deploy": "wrangler deploy",
+    "card": "node tools/make-card.mjs",
+    "balance": "node tools/balance.mjs"
+  },
+  "devDependencies": {
+    "qrcode": "^1.5.4",
+    "wrangler": "^4.168.0"
+  }
+}

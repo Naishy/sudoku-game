@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sudoku-game",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-01",
+  // Static files in ./public are served directly; anything else (e.g. /api/log) reaches the Worker.
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  // Pilot stats: the one database shared by every family game (family-games/telemetry).
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "family-telemetry",
+      "database_id": "702e60c9-d505-4499-b2b2-602f4313da3d",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Cloudflare creates the DNS record and certificate for this automatically.
+  "routes": [
+    { "pattern": "gridworks.tequinox.net", "custom_domain": true }
+  ]
+}

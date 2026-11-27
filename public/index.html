@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#f6f4ef">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Grid Works">
+  <title>Grid Works</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- today: the four puzzles -->
+    <section id="home" class="screen">
+      <header class="poster">
+        <div class="poster-text">
+          <div class="eyebrow">New paintings by Heidi</div>
+          <h1 class="logo">Grid Works</h1>
+          <div id="today-date" class="today-date"></div>
+          <div class="palette-line"><span id="today-swatches" class="swatches"></span><span id="today-palette"></span></div>
+        </div>
+        <canvas id="portrait" class="portrait" width="96" height="96" aria-hidden="true"></canvas>
+      </header>
+      <div id="levels" class="levels"></div>
+      <p id="home-note" class="home-note"></p>
+      <div class="home-buttons">
+        <button id="btn-works" class="btn">Works <span id="works-count" class="count"></span></button>
+        <button id="btn-how" class="btn ghost">How to play</button>
+        <button id="btn-settings" class="btn ghost icon" aria-label="Settings">⚙︎</button>
+      </div>
+      <div id="family-slot" class="family-slot"></div>
+    </section>
+
+    <!-- playing a puzzle -->
+    <section id="play" class="screen hidden">
+      <div class="topbar">
+        <button id="btn-back" class="icon-btn" aria-label="Back to today">‹</button>
+        <div class="top-title"><b id="play-level"></b><span id="play-sub"></span></div>
+        <button id="timer" class="timer" aria-label="Show or hide the clock"></button>
+        <button id="coach-skip" class="link hidden">Skip the guide</button>
+        <button id="btn-menu" class="icon-btn" aria-label="More">⋯</button>
+      </div>
+      <div class="grid-wrap"><div id="grid" class="grid" role="grid" aria-label="Sudoku grid"></div></div>
+      <div id="say" class="say">
+        <canvas id="say-face" class="say-face" width="72" height="72" aria-hidden="true"></canvas>
+        <p id="say-text"></p>
+      </div>
+      <div class="tools">
+        <button id="t-undo" class="tool"><span class="tool-ic">↶</span>Undo</button>
+        <button id="t-erase" class="tool"><span class="tool-ic">⌫</span>Erase</button>
+        <button id="t-notes" class="tool"><span class="tool-ic">✎</span><span>Notes <i id="notes-state">off</i></span></button>
+        <button id="t-hint" class="tool"><span class="tool-ic">✦</span>Hint</button>
+      </div>
+      <div id="pad" class="pad"></div>
+    </section>
+
+    <!-- the finished work, framed -->
+    <section id="finish" class="screen gallery-wall hidden">
+      <div class="finish-inner">
+        <div class="frame"><canvas id="finish-canvas"></canvas></div>
+        <div class="wall-label">
+          <div id="fin-artist" class="artist"></div>
+          <div class="work-title"><i id="fin-title"></i><span id="fin-year"></span></div>
+          <div id="fin-medium" class="medium"></div>
+        </div>
+        <div class="finish-score">
+          <div id="fin-line" class="fin-line"></div>
+          <div class="points"><b id="fin-points"></b><span>points</span></div>
+          <div id="fin-best" class="fin-best"></div>
+          <div id="fin-family" class="fin-family hidden"></div>
+        </div>
+        <p id="fin-heidi" class="fin-heidi"></p>
+        <div class="row">
+          <button id="fin-home" class="btn big">Lovely</button>
+          <button id="fin-save" class="btn ghost">Save picture</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- the collection -->
+    <section id="works" class="screen gallery-wall hidden">
+      <div class="topbar plain">
+        <button id="works-back" class="icon-btn" aria-label="Back">‹</button>
+        <div class="top-title"><b>Works</b><span id="works-sub"></span></div>
+      </div>
+      <div id="works-grid" class="works-grid"></div>
+      <p id="works-empty" class="works-empty hidden">Finished puzzles hang here. Every grid you complete becomes a painting.</p>
+    </section>
+
+    <section id="work" class="screen gallery-wall hidden">
+      <div class="topbar plain">
+        <button id="work-back" class="icon-btn" aria-label="Back to Works">‹</button>
+      </div>
+      <div class="finish-inner">
+        <div class="frame"><canvas id="work-canvas"></canvas></div>
+        <div class="wall-label">
+          <div id="work-artist" class="artist"></div>
+          <div class="work-title"><i id="work-title"></i><span id="work-year"></span></div>
+          <div id="work-medium" class="medium"></div>
+        </div>
+        <div class="row"><button id="work-save" class="btn ghost">Save picture</button></div>
+      </div>
+    </section>
+
+    <!-- first visit -->
+    <div id="welcome" class="modal hidden">
+      <div class="card">
+        <h2>Welcome to Grid Works</h2>
+        <p>A new Sudoku every day at four levels, from a gentle Sketch to a fiendish Masterpiece. Every grid you finish becomes a painting for your collection.</p>
+        <div class="col">
+          <button id="welcome-guide" class="btn big">Show me how</button>
+          <button id="welcome-skip" class="btn ghost">I know Sudoku</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="how" class="modal hidden">
+      <div class="card">
+        <h2>How to play</h2>
+        <ul class="how-list">
+          <li><b>Fill the grid</b> so every row, column and 3×3 box has the numbers 1 to 9, once each.</li>
+          <li><b>Tap a square, then a number.</b> Tap a number with no square chosen to see where it is already.</li>
+          <li><b>Notes</b> pencil in the numbers a square might be. They tidy themselves as you go.</li>
+          <li><b>Hint</b>: Ziggi the cat sits by where to look next, and you're told why. Tap again to fill it in.</li>
+          <li><b>Four levels</b> every day, the same for everyone: Sketch, Study, Composition and Masterpiece.</li>
+          <li><b>Every finished grid becomes a painting.</b> The day's palette colours it; the level decides how it's painted.</li>
+          <li><b>Points</b> come from the level and your time, less a little for each hint. No rush: slow still counts.</li>
+        </ul>
+        <div class="row">
+          <button id="how-guide" class="btn ghost">Show me again</button>
+          <button id="how-close" class="btn big">Lovely</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="settings" class="modal hidden">
+      <div class="card">
+        <h2>Settings</h2>
+        <div id="settings-list" class="settings-list"></div>
+        <button id="settings-close" class="btn big">Done</button>
+      </div>
+    </div>
+
+    <div id="menu" class="modal hidden">
+      <div class="card">
+        <div class="col">
+          <button id="m-notes" class="btn ghost">Fill in all notes</button>
+          <button id="m-clear-notes" class="btn ghost">Clear all notes</button>
+          <button id="m-restart" class="btn ghost">Start again</button>
+          <button id="m-settings" class="btn ghost">Settings</button>
+          <button id="m-close" class="btn big">Back to the puzzle</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="gift" class="gift hidden">
+      <div class="gift-inner">
+        <button id="gift-box" class="gift-box" aria-label="Open your present">
+          <span class="gift-lid"></span>
+          <span class="gift-base"></span>
+          <span class="gift-tag">Something for you. Tap to open</span>
+        </button>
+        <div class="gift-card">
+          <h2 id="gift-heading"></h2>
+          <div id="gift-message"></div>
+          <p id="gift-signature" class="gift-signature"></p>
+          <button id="gift-go" class="btn big">To the gallery</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="install" class="modal hidden">
+      <div class="card">
+        <h2>Pop it on your home screen</h2>
+        <p id="install-how" class="install-how"></p>
+        <div class="row">
+          <button id="btn-install" class="btn big hidden">Install</button>
+          <button id="btn-install-done" class="btn ghost">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="update-note" class="update-note hidden">Update ready: it'll load when you're back on today's page</div>
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
