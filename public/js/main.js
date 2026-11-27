@@ -12,7 +12,7 @@ import { Telemetry, VERSION } from './telemetry.js';
 import { GIFT, shouldShowGift, markGiftSeen, fromCard } from './gift.js';
 import { drawHeidi } from './cast.js';
 import { drawZiggy, ZIGGY_BOX } from './ziggy.js';
-import { Walker, seatNear } from './walk.js';
+import { Walker, Stroll, seatNear } from './walk.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -37,7 +37,9 @@ function show(name) {
   screen = name;
   for (const s of SCREENS) $(s).classList.toggle('hidden', s !== name);
   if (name !== 'play') walker?.hide();
-  if (name === 'home') { renderHome(); if (updateReady) location.reload(); }
+  if (name !== 'home') homeCat?.hide();
+  if (name !== 'finish') finCat?.hide();
+  if (name === 'home') { renderHome(); homeCat?.enter(); if (updateReady) location.reload(); }
 }
 const modalOpen = () => ['welcome', 'how', 'settings', 'menu', 'install', 'gift'].some((m) => !$(m).classList.contains('hidden'));
 
@@ -161,6 +163,27 @@ function buildBoard() {
 }
 buildBoard();
 const walker = new Walker($('ziggy-walk'), $('grid'));
+
+// Ziggy about the place: wandering on today's page, and come to see each finished work.
+// Tap her and she purrs.
+function petZiggy(where) {
+  sound.purr(); haptics.purr();
+  tel.log('ziggy-pet', { where });
+}
+let noteTimer = 0;
+const homeCat = new Stroll($('home-ziggy'), {
+  size: 70,
+  seat: (w) => w * 0.13,
+  wander: (w, x) => (x < w / 2 ? w * (0.84 + Math.random() * 0.04) : w * (0.11 + Math.random() * 0.04)),
+  onTap: () => {
+    petZiggy('home');
+    $('home-note').textContent = L.ziggyPetted();
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(() => { if (screen === 'home') renderHome(); }, 4500);
+  },
+});
+// she sits by the bottom right-hand corner of the frame
+const finCat = new Stroll($('fin-ziggy'), { size: 64, seat: (w) => w - 70 - 8, onTap: () => petZiggy('finish') });
 
 function openPuzzle(key, { daily, day, palette, tutorial = null }) {
   const f = tutorial ? null : fromKey(key);
@@ -516,7 +539,8 @@ function showFinish(work, { score, newBest }) {
   $('fin-home').textContent = 'Lovely';
   show('finish');
   animatePainting($('finish-canvas'), work.key, f.level, work.palette, frameSize());
-  $('fin-save').onclick = () => savePicture(work);
+  finCat.enter({ from: 'right', delay: 1500 });
+  $('fin-save').onclick = () => sharePicture(work);
 }
 
 // --- the gallery ---------------------------------------------------------------------------------
@@ -555,7 +579,7 @@ function openWork(w) {
   const ctx = cv.getContext('2d');
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   paint(ctx, solutionOf(w.key), { size: px, level: f.level, palette: w.palette, seed: w.key });
-  $('work-save').onclick = () => savePicture(w);
+  $('work-save').onclick = () => sharePicture(w);
   tel.log('work-view', { key: w.key });
 }
 $('btn-works').onclick = () => { sound.tap(); renderWorks(); show('works'); tel.log('works', { n: store.works().length }); };
@@ -563,7 +587,7 @@ $('works-back').onclick = () => show('home');
 $('work-back').onclick = () => { renderWorks(); show('works'); };
 
 /** The work on a gallery wall with its label, as a picture to keep or send. */
-async function savePicture(w) {
+async function sharePicture(w) {
   const f = fromKey(w.key);
   const lab = labelFor(w, f);
   const W = 1200, H = 1500;
@@ -587,7 +611,7 @@ async function savePicture(w) {
   if (!blob) return;
   const name = `${lab.title.replace(/[^\w &]+/g, '').trim()}.png`;
   const file = new File([blob], name, { type: 'image/png' });
-  tel.log('save-picture', { key: w.key });
+  tel.log('share-picture', { key: w.key });
   try {
     if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: lab.title }); return; }
   } catch { return; /* cancelled */ }

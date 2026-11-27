@@ -90,3 +90,21 @@ export function homeNote(doneToday, total) {
   if (doneToday === 0) return 'Four new puzzles today. Start wherever you like.';
   return `${doneToday} of ${total} hung today.`;
 }
+
+/** What Ziggy does when you tap her on today's page. */
+const PETTED = [
+  'Ziggy purrs.',
+  'Ziggy slow-blinks at you. In cat, that\'s "I love you".',
+  'Ziggy headbutts your hand, purring.',
+  'Ziggy purrs, then pretends she didn\'t.',
+  'Ziggy stretches, one paw at a time.',
+  'Ziggy wonders if it\'s dinner time yet.',
+  'Ziggy purrs. She likes a good grid.',
+];
+let lastPet = -1;
+export function ziggyPetted() {
+  let i;
+  do i = Math.floor(Math.random() * PETTED.length); while (i === lastPet);
+  lastPet = i;
+  return PETTED[i];
+}

@@ -65,5 +65,6 @@ export class Haptics {
   note() { this.buzz(18, { ios: false }); }
   unit() { this.buzz([30, 50, 40]); }
   hint() { this.buzz([20, 40, 20]); }
+  purr() { this.buzz([10, 30, 10, 30, 10, 30, 10, 30, 10]); }
   finish() { this.buzz([40, 70, 40, 70, 40, 70, 160]); }
 }
