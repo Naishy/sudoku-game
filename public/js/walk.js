@@ -107,6 +107,8 @@ export class Walker {
     this.lieFrom = 0; this.lieTo = 0; this.lieT0 = 0;
     this.groomAt = -1e9; this.groomKind = 'paw'; this.nextGroom = 0;
     this.onMeow = null; // (kind) => seconds: plays a meow
+    this.onLeave = null; // called once she's walked out of the grid
+    this.goneTimer = 0;
   }
 
   /** Asleep (or curling up, or still waking): anything you do should wake her. */
@@ -124,6 +126,8 @@ export class Walker {
   sitAt(i) {
     if (i == null || i < 0) { this.leave(); return; }
     clearTimeout(this.leaveTimer);
+    clearTimeout(this.goneTimer);
+    this.onLeave = null;
     if (this.seat === i && this.state !== 'walking-out') return;
     this.napping = false;
     const col = i % 9, row = Math.floor(i / 9);
@@ -154,6 +158,9 @@ export class Walker {
     }
     this.seat = -1;
     this.go({ x: this.x, y: this.y }, { x: this.x <= 4 ? -1.6 : 10.6, y: this.y }, 'walking-out');
+    // whatever goes with her (her words) goes once she's out of sight
+    const cb = this.onLeave; this.onLeave = null;
+    if (cb) { clearTimeout(this.goneTimer); this.goneTimer = setTimeout(cb, reduceMotion() ? 1500 : WALK_MS); }
   }
 
   go(from, to, state) {

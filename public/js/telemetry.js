@@ -1,7 +1,7 @@
 // Anonymous gameplay logging for the pilot: what happened, when, and how close.
 // Sent in batches to POST /api/log. Nothing personal: a random id per phone and
 // per visit, the screen size and browser. Off with ?notelemetry; off locally unless ?telemetry.
-export const VERSION = 'v15'; // keep in step with VERSION in sw.js
+export const VERSION = 'v16'; // keep in step with VERSION in sw.js
 
 const DEVICE_KEY = 'gw.device';
 const rid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
