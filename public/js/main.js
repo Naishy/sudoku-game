@@ -232,6 +232,12 @@ function select(i) {
   if (!G || G.done) return;
   G.sel = G.sel === i && !G.values[i] ? -1 : i;
   G.digit = G.sel >= 0 ? G.values[G.sel] : 0;
+  // tapped the square Ziggy's sitting in during a hint: she shifts over so you can see it
+  const p = G.pending;
+  if (p && G.sel >= 0 && p.seat === G.sel) {
+    p.avoid.add(G.sel);
+    p.seat = seatNear(G.values, G.notes, p.region, p.avoid, p.target);
+  }
   sound.tap();
   render();
   coachEvent('select', i);
@@ -349,7 +355,8 @@ function hint() {
   for (let i = 0; i < 81; i++) if (G.values[i] && !G.givens[i] && G.values[i] !== G.solution[i]) wrong.push(i);
   if (!G.tutorial) { G.hints++; save(); }
   if (wrong.length) {
-    G.pending = { stage: 1, wrong, glow: wrong, hl: [], seat: seatNear(G.values, G.notes, wrong, new Set(wrong), wrong[0]) };
+    const avoid = new Set(wrong);
+    G.pending = { stage: 1, wrong, glow: wrong, hl: [], region: wrong, avoid, target: wrong[0], seat: seatNear(G.values, G.notes, wrong, avoid, wrong[0]) };
     say('ziggy', L.mistakeText(wrong.length));
     tel.log('hint', { key: G.key, mistakes: wrong.length });
     render();
@@ -363,7 +370,8 @@ function hint() {
   if (h.tech === 'hiddenSingle') { hl = UNITS[h.unit]; glow = []; } else if (h.via) { hl = h.via.cells; }
   // Ziggy sits in an empty square beside the squares the hint is about
   const region = [...hl, ...glow, target];
-  G.pending = { stage: 1, h, hl, glow, seat: seatNear(G.values, G.notes, region, new Set([...region, target]), target) };
+  const avoid = new Set([...region, target]);
+  G.pending = { stage: 1, h, hl, glow, region, avoid, target, seat: seatNear(G.values, G.notes, region, avoid, target) };
   G.sel = -1; G.digit = 0; // so the hint's squares stand out
   say('ziggy', L.hintText(h));
   tel.log('hint', { key: G.key, tech: h.tech, level: G.level });
