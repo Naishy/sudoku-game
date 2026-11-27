@@ -52,11 +52,13 @@ const page = `<!doctype html><html><head><meta charset="utf-8">
   .url { font-weight: 600; font-size: 8.5pt; margin-top: 1.5mm; color: #7a7166; }
   .code { font-size: 8pt; margin-top: 1mm; color: #7a7166; }
   .spacer { flex: 1; }
+  .byline { font-family: Fraunces, serif; font-style: italic; color: #145a5c; font-size: 15pt; text-align: center; margin-top: -1mm; }
   .from { font-family: Fraunces, serif; font-style: italic; color: #145a5c; font-size: 11pt; margin-bottom: 4mm; }
 </style></head><body>
   <div class="band"></div>
-  <div class="tag">New paintings by Heidi</div>
+  <div class="tag">A new painting every day</div>
   <h1>Grid Works</h1>
+  <div class="byline">by Heidi</div>
   <div class="mid">
     <canvas id="heidi" width="340" height="460"></canvas>
     <div class="qr"><img src="qr.svg" alt=""><b>Scan to open</b></div>

@@ -1,4 +1,4 @@
-# Grid Works
+# Grid Works by Heidi
 
 A daily Sudoku for Heidi, where every finished grid becomes a painting. One of Tim's family Christmas games (see the [family games playbook](https://github.com/Naishy/family-games/blob/main/GAMES.md)).
 

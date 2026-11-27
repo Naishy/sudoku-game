@@ -87,7 +87,7 @@ export function finishLine(level, { who = null, hints = 0, christmas = false } =
 
 export function homeNote(doneToday, total) {
   if (doneToday === total) return 'All four hung today. Thanks heaps!';
-  if (doneToday === 0) return 'Four new puzzles today. Start wherever you like.';
+  if (doneToday === 0) return 'Start wherever you like. Ziggy will help.';
   return `${doneToday} of ${total} hung today.`;
 }
 
@@ -131,4 +131,66 @@ export function ziggyPetted() {
   do i = Math.floor(Math.random() * PETTED.length); while (i === lastPet);
   lastPet = i;
   return PETTED[i];
+}
+
+/**
+ * Heidi opens each day's exhibition with a line on today's page: one a day, the same for
+ * everyone (it turns on the day, not on chance). Special days first, then on alternate
+ * days something about the day's colours, else one from the general pool.
+ */
+const OPENING_COLOURS = {
+  'Sumac & Pistachio': 'Sumac and pistachio today. Very Middle Eastern, very me.',
+  Emerald: 'Emerald today. My favourite, obviously.',
+  'Canberra Autumn': 'Canberra Autumn today. Takes me straight home.',
+  'Persian Tiles': 'Persian Tiles today. I could look at these all day.',
+  'Bondi Morning': 'Bondi Morning today. Bit warmer than here, darl.',
+  'Lemon Grove': 'Lemon Grove today. Sunshine in a box.',
+  'Rose & Cardamom': 'Rose and cardamom today. Smells like baking, doesn\'t it?',
+  'Gallery White': 'Gallery White today. Very serious. Very chic.',
+  'Kitchen Garden': 'Kitchen Garden today. Pesto colours: Rex and Marlowe will approve.',
+  'Blue Hour': 'Blue Hour today. One for a quiet evening.',
+  'Saffron & Indigo': 'Saffron and indigo today. Bold. I love it.',
+  'Christmas Table': 'The Christmas Table\'s laid. Help yourself, darl.',
+};
+const OPENING_DAYS = {
+  1: ['Monday. Four fresh works on the wall, darl.', 'New week, new works. Kettle\'s on.'],
+  5: ['Friday! Pour a glass and pick a level.', 'Friday opening. Nibbles are out.'],
+  6: ['Weekend opening. Take your time with these.', 'Saturday. No rush, darl.'],
+  0: ['Sunday. Feet up, pencil out.', 'Sunday opening. Ziggy\'s already found the sunny spot.'],
+};
+const OPENING = [
+  'Doors are open. Four new works today.',
+  'The opening\'s on. No speeches, just Sudoku.',
+  'Four new works, all hung straight. Thanks heaps, Ziggy.',
+  'Who\'s Masterpiece Captain today?',
+  'Sketch Captain, Study Captain: all welcome.',
+  'Mel, the Masterpiece has your name on it.',
+  'Ed says he remembers every one of these. He doesn\'t.',
+  'Fresh paint. Mind the walls, darl.',
+  'Today\'s works are in. You\'re my favourite for coming.',
+  'Something for everyone today.',
+  'Grab a cuppa. The works aren\'t going anywhere.',
+  'Quiet in the gallery today. Perfect for a Masterpiece.',
+  'A good day for a Composition, I reckon.',
+  'Ziggy\'s checked the frames. All present.',
+];
+const SPECIAL = {
+  '11-24': 'Christmas Eve opening. Mince pie in one hand, pencil in the other.',
+  '11-25': 'Happy Christmas, darl! You\'re all my favourite today.',
+  '11-26': 'Boxing Day. Leftovers and a Masterpiece. Perfect.',
+  '11-31': 'Last opening of the year. Make it a good one.',
+  '0-1': 'Happy New Year! First works of the year, darl.',
+};
+export function openingLine(day, date, paletteName) {
+  const special = SPECIAL[`${date.getMonth()}-${date.getDate()}`];
+  if (special) return special;
+  const n = ((day % 1000) + 1000) % 1000;
+  if (n % 2 && OPENING_COLOURS[paletteName]) return OPENING_COLOURS[paletteName];
+  const week = OPENING_DAYS[date.getDay()];
+  if (week && n % 3 === 0) return week[Math.floor(n / 3) % week.length];
+  if (date.getMonth() === 11 && date.getDate() < 24) {
+    const sleeps = 25 - date.getDate();
+    if (n % 4 === 0) return `${sleeps} sleeps till Christmas. Four works a day till then.`;
+  }
+  return OPENING[(Math.imul(n, 2654435761) >>> 0) % OPENING.length];
 }

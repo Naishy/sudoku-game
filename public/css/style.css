@@ -43,10 +43,15 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .icon-btn { border: 0; background: none; font-size: 1.7rem; width: 44px; height: 44px; line-height: 1; border-radius: 50%; color: var(--ink); }
 
 /* --- today ---------------------------------------------------------------------------- */
-.poster { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 8px 2px 18px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+.poster { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 8px 2px 12px; }
 .eyebrow { font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--soft); font-weight: 600; }
 .logo { font-family: var(--head); font-weight: 600; font-size: 2.6rem; line-height: 1; margin: 0.12em 0 0.18em; letter-spacing: -0.01em; }
-.today-date { font-family: var(--head); font-style: italic; font-size: 1.05rem; }
+.by { font-family: var(--head); font-style: italic; font-size: 1.15rem; color: var(--emerald); }
+/* Heidi's opening line: a speech bubble pointing up at her portrait */
+.opening { position: relative; margin: 0 0 14px; padding: 10px 14px; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; font-family: var(--head); font-style: italic; font-size: 1rem; line-height: 1.35; }
+.opening::before { content: ''; position: absolute; right: 44px; top: -8px; width: 14px; height: 14px; background: var(--paper); border-left: 1px solid var(--line); border-top: 1px solid var(--line); transform: rotate(45deg); }
+.opening .who { font-family: var(--font); font-style: normal; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--soft); font-weight: 600; white-space: nowrap; margin-left: 4px; }
+.opening .who::before { content: '— '; }
 .palette-line { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.8rem; color: var(--soft); }
 .swatches { display: inline-flex; }
 .swatches { box-shadow: 0 0 0 1px var(--line); }

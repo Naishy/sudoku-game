@@ -71,3 +71,19 @@ test('installing on an iPhone carries the works across', () => {
   assert.equal(out['gw.works'].split(',').length, 2);
   assert.deepEqual(merge(carried, have)['gw.best'], undefined, 'a lower best never replaces a higher one');
 });
+
+test("Heidi's opening line: one a day, the same for everyone, for every day of the year", async () => {
+  const { openingLine } = await import('../public/js/lines.js');
+  const start = dayNumber(new Date(2026, 0, 1, 12));
+  const seen = new Set();
+  for (let day = start; day < start + 366; day++) {
+    const date = dateOfDay(day);
+    const name = PALETTES[paletteFor(day, date)].name;
+    const line = openingLine(day, date, name);
+    assert.ok(line && line.length < 90, `day ${day}: ${line}`);
+    assert.equal(openingLine(day, date, name), line);
+    seen.add(line);
+  }
+  assert.ok(seen.size > 25, 'plenty of variety');
+  assert.match(openingLine(start + 358, new Date(2026, 11, 25), 'Christmas Table'), /Christmas/);
+});
