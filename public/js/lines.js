@@ -101,6 +101,21 @@ const PETTED = [
   'Ziggy wonders if it\'s dinner time yet.',
   'Ziggy purrs. She likes a good grid.',
 ];
+/** Tapping her on today's page when she's asleep. */
+const WOKEN = [
+  'Ziggy opens one eye, stretches, and purrs.',
+  'Ziggy wakes up, yawns, and purrs anyway.',
+  'Ziggy stretches out every claw, then purrs.',
+  'Ziggy was only resting her eyes. She purrs.',
+];
+/** When she comes and naps on a grid that's been left alone. */
+const NAPPING = [
+  'Ziggy\'s curled up on your grid for a nap. Tap anywhere and she\'ll move.',
+  'Ziggy thinks a quiet grid is a good place for a sleep. Tap anywhere to wake her.',
+  'Ziggy has settled on the grid, as cats do. She\'ll move when you carry on.',
+];
+export const ziggyWoken = () => WOKEN[Math.floor(Math.random() * WOKEN.length)];
+export const ziggyNapping = () => NAPPING[Math.floor(Math.random() * NAPPING.length)];
 let lastPet = -1;
 export function ziggyPetted() {
   let i;

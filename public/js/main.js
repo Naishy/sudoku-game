@@ -11,8 +11,8 @@ import { Haptics } from './haptics.js';
 import { Telemetry, VERSION } from './telemetry.js';
 import { GIFT, shouldShowGift, markGiftSeen, fromCard } from './gift.js';
 import { drawHeidi } from './cast.js';
-import { drawZiggy, ZIGGY_BOX } from './ziggy.js';
-import { Walker, Stroll, seatNear } from './walk.js';
+import { drawZiggy, drawZiggySleeping, ZIGGY_BOX } from './ziggy.js';
+import { Walker, Stroll, seatNear, napSeat } from './walk.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -43,7 +43,7 @@ function show(name) {
 const modalOpen = () => ['welcome', 'how', 'settings', 'menu', 'install', 'gift'].some((m) => !$(m).classList.contains('hidden'));
 
 // --- the cast, drawn small ------------------------------------------------------------------
-function face(canvas, who, px) {
+function face(canvas, who, px, { asleep = false } = {}) {
   // Ziggy sits whole beside the bubble (no circle round her); Heidi's portrait is round
   const w = who === 'ziggy' ? Math.round(px * 0.84) : px;
   canvas.width = Math.round(w * DPR);
@@ -56,7 +56,9 @@ function face(canvas, who, px) {
   if (who === 'ziggy') {
     const B = ZIGGY_BOX;
     const s = Math.min(w / (B.right - B.left + 6), px / (B.bottom - B.top + 6));
-    drawZiggy(ctx, (3 - B.left) * s + (w - (B.right - B.left + 6) * s) / 2, (3 - B.top) * s, s, { body: true });
+    const x = (3 - B.left) * s + (w - (B.right - B.left + 6) * s) / 2, y = (3 - B.top) * s;
+    if (who === 'ziggy' && asleep) drawZiggySleeping(ctx, x, y, s, {});
+    else drawZiggy(ctx, x, y, s, { body: true });
   }
   else drawHeidi(ctx, px / 2, px * 0.5, px / 150, { body: true, mood: 'happy' });
 }
@@ -163,19 +165,20 @@ function buildBoard() {
 buildBoard();
 const walker = new Walker($('ziggy-walk'), $('grid'));
 
-// Ziggy about today's page, wandering from one side to the other. Tap her and she purrs.
-function petZiggy(where) {
-  sound.purr(); haptics.purr();
-  tel.log('ziggy-pet', { where });
+// Ziggy about today's page, wandering from one side to the other, having a wash, dozing
+// off. Tap her and she purrs (asleep, she sits up first).
+function petZiggy(where, woke = false) {
+  setTimeout(() => { sound.purr(); haptics.purr(); }, woke ? 700 : 0);
+  tel.log('ziggy-pet', woke ? { where, woke } : { where });
 }
 let noteTimer = 0;
 const homeCat = new Stroll($('home-ziggy'), {
   size: 70,
   seat: (w) => w * 0.13,
   wander: (w, x) => (x < w / 2 ? w * (0.84 + Math.random() * 0.04) : w * (0.11 + Math.random() * 0.04)),
-  onTap: () => {
-    petZiggy('home');
-    $('home-note').textContent = L.ziggyPetted();
+  onTap: ({ woke } = {}) => {
+    petZiggy('home', woke);
+    $('home-note').textContent = woke ? L.ziggyWoken() : L.ziggyPetted();
     clearTimeout(noteTimer);
     noteTimer = setTimeout(() => { if (screen === 'home') renderHome(); }, 4500);
   },
@@ -421,6 +424,28 @@ function render() {
   syncZiggy();
 }
 
+// Leave the grid alone this long and Ziggy comes and naps on it; anything you do wakes her
+const NAP_AFTER_MS = 90 * 1000;
+let lastTouch = performance.now();
+let napSaid = false;
+function stirred() {
+  lastTouch = performance.now();
+  if (screen !== 'play' || !walker.napping) return;
+  walker.leave();
+  if (napSaid) { say(null); napSaid = false; }
+}
+document.addEventListener('pointerdown', stirred, true);
+document.addEventListener('keydown', stirred, true);
+function maybeNap() {
+  if (!G || G.done || G.tutorial || G.pending || walker.state !== 'away' || performance.now() - lastTouch < NAP_AFTER_MS) return;
+  const seat = napSeat(G.values, G.givens, G.sel);
+  if (seat < 0) return;
+  lastTouch = performance.now();
+  walker.nap(seat);
+  say('ziggy', L.ziggyNapping(), { asleep: true }); napSaid = true;
+  tel.log('ziggy-nap', {});
+}
+
 // Ziggy on the grid: beside a hint while it's showing, or the guide's glowing square
 function syncZiggy() {
   if (!G || G.done || screen !== 'play') { walker.leave(); return; }
@@ -446,11 +471,11 @@ function fitGrid() {
 window.addEventListener('resize', fitGrid);
 
 const sayFaceSize = () => (innerHeight <= 700 ? 76 : 86);
-function say(who, text, { coach = false } = {}) {
+function say(who, text, { coach = false, asleep = false } = {}) {
   const box = $('say');
   box.classList.toggle('coach', coach);
   if (!who) { box.classList.remove('on'); return; }
-  face($('say-face'), who, sayFaceSize());
+  face($('say-face'), who, sayFaceSize(), { asleep });
   $('say-text').textContent = text;
   box.classList.add('on');
 }
@@ -466,6 +491,7 @@ setInterval(() => {
   if (!G || G.done || screen !== 'play' || document.hidden || modalOpen()) return;
   G.secs++;
   tick();
+  maybeNap();
   if (G.secs % 5 === 0) save();
 }, 1000);
 $('timer').onclick = () => { S.timer = !S.timer; store.saveSettings(S); tick(); };
