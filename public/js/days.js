@@ -75,7 +75,7 @@ export function clock(secs) {
 export function longTime(secs) {
   const m = Math.floor(secs / 60);
   const s = Math.round(secs % 60);
-  if (m === 0) return `${s} seconds`;
+  if (m === 0) return `${s} second${s === 1 ? '' : 's'}`;
   if (m >= 60) return `${Math.floor(m / 60)} h ${m % 60} min`;
   return s ? `${m} min ${s} s` : `${m} min`;
 }
