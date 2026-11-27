@@ -1,9 +1,9 @@
-// Ziggi, Ed and Heidi's cat, who shows you round and gives the hints (by sitting next to
+// Ziggy, Ed and Heidi's cat, who shows you round and gives the hints (by sitting next to
 // the right part of the grid, as cats do). Drawn in the family cast's style: (x, y) is the
 // middle of the face, s the scale; a head is about 80 units tall at 1.
 //
 // Drawn from Tim's photo: a brown tabby with dark stripes, a white chin and chest, and
-// white paws. (To add Ziggi to the family cast later, move this into family-games
+// white paws. (To add Ziggy to the family cast later, move this into family-games
 // cast/people.js so every game draws her alike.)
 const INK = '#2b1d14';
 export const COAT = {
@@ -27,10 +27,10 @@ function stripe(ctx, pts, w = 4) {
   ctx.strokeStyle = COAT.dark; ctx.lineWidth = w; ctx.stroke();
 }
 
-/** The size of Ziggi sitting, in her own units: for fitting her into a box. */
-export const ZIGGI_BOX = { left: -52, right: 74, top: -48, bottom: 104 };
+/** The size of Ziggy sitting, in her own units: for fitting her into a box. */
+export const ZIGGY_BOX = { left: -52, right: 74, top: -48, bottom: 104 };
 
-export function drawZiggi(ctx, x, y, s = 1, { t = 0, blink = false, body = true } = {}) {
+export function drawZiggy(ctx, x, y, s = 1, { t = 0, blink = false, body = true } = {}) {
   const C = COAT;
   ctx.save();
   ctx.translate(x, y);
