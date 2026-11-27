@@ -1,6 +1,6 @@
 // Offline play + auto-update. Serve from cache, refresh in the background.
 // Bump VERSION on every deploy: that's what tells installed copies there's a new version.
-const VERSION = 'v15'; // keep in step with VERSION in js/telemetry.js
+const VERSION = 'v16'; // keep in step with VERSION in js/telemetry.js
 const CACHE = `gridworks-${VERSION}`;
 const ASSETS = [
   './',

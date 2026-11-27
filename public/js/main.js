@@ -468,7 +468,11 @@ function maybeNap() {
 function syncZiggy() {
   if (!G || G.done || screen !== 'play') { walker.leave(); return; }
   const seat = G.pending?.seat ?? G.tutorial?.seat ?? -1;
-  if (seat >= 0) walker.sitAt(seat); else walker.leave();
+  if (seat >= 0) { walker.sitAt(seat); return; }
+  // when she walks off, her hint goes with her (unless something newer's been said since)
+  const said = sayCount;
+  if (!G.tutorial && (walker.state === 'sitting' || walker.state === 'walking-in')) walker.onLeave = () => { if (said === sayCount && !G?.tutorial && !$('say').classList.contains('coach')) say(null); };
+  walker.leave();
 }
 
 // the grid takes whatever height is left once everything else is laid out
@@ -496,7 +500,9 @@ window.addEventListener('resize', fitGrid);
 
 const sayFaceSize = () => (innerHeight <= 700 ? 76 : 86);
 // Ziggy's words show on their own: she's on the grid (never a second Ziggy by the bubble)
+let sayCount = 0; // goes up with every new line, so Ziggy only takes her own words with her
 function say(who, text, { coach = false } = {}) {
+  sayCount++;
   const box = $('say');
   box.classList.toggle('coach', coach);
   if (!who) { box.classList.remove('on'); return; }
