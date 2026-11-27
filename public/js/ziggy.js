@@ -113,3 +113,103 @@ export function drawZiggy(ctx, x, y, s = 1, { t = 0, blink = false, body = true 
   for (const k of [-1, 1]) for (const dy of [-2, 3]) { ctx.beginPath(); ctx.moveTo(k * 18, 12 + dy); ctx.lineTo(k * 46, 8 + dy * 2.2); ctx.stroke(); }
   ctx.restore();
 }
+
+/** The size of Ziggy walking, side on and facing right, in the same units (paws at y = 0). */
+export const ZIGGY_WALK_BOX = { left: -96, right: 98, top: -144, bottom: 2 };
+
+/**
+ * Ziggy walking, side on, facing right: the same cat as drawZiggy at the same scale. (x, y)
+ * is the ground under her middle. `phase` turns once per stride (radians); `t` swishes the
+ * tail; `look` turns her head up a little (0 to 1), as when she's admiring a picture.
+ */
+export function drawZiggyWalking(ctx, x, y, s = 1, { phase = 0, t = 0, blink = false, look = 0 } = {}) {
+  const C = COAT;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  // a walking cat moves the legs on one side together, near and far half a stride apart
+  const leg = (hx, hy, ph, near) => {
+    const swing = Math.sin(ph) * 13;
+    const lift = Math.max(0, Math.cos(ph)) * 9;
+    const fx = hx + swing, fy = -lift;
+    const kx = hx + swing * 0.45 + (hx > 0 ? 4 : -5), ky = (hy + fy) / 2 - 2;
+    const path = () => { ctx.beginPath(); ctx.moveTo(hx, hy); ctx.quadraticCurveTo(kx, ky, fx, fy - 5); };
+    path(); ctx.strokeStyle = INK; ctx.lineWidth = 17; ctx.stroke();
+    path(); ctx.strokeStyle = near ? C.fur : '#76674f'; ctx.lineWidth = 12; ctx.stroke();
+    // a stripe round the leg, then the white paw
+    ctx.strokeStyle = C.dark; ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.moveTo((hx + kx) / 2 - 6, (hy + ky) / 2); ctx.lineTo((hx + kx) / 2 + 6, (hy + ky) / 2 + 1); ctx.stroke();
+    ell(ctx, fx + 3, fy - 3, 10, 6); fs(ctx, near ? C.white : '#ddd6cb', INK, 2.5);
+  };
+  const BACK = [-36, -54], FRONT = [34, -54];
+  // far legs first, behind the body
+  leg(BACK[0] + 6, BACK[1], phase + Math.PI, false);
+  leg(FRONT[0] + 6, FRONT[1], phase, false);
+  ctx.save();
+  ctx.translate(0, -10); // the body rides on the legs
+  // the tail, up and curling over at the tip, with rings and a dark tip
+  const sw = Math.sin(t * 2.2) * 5;
+  const tail = () => { ctx.beginPath(); ctx.moveTo(-52, -62); ctx.bezierCurveTo(-80, -70, -86 + sw * 0.4, -104, -76 + sw, -124); };
+  tail(); ctx.strokeStyle = INK; ctx.lineWidth = 16; ctx.stroke();
+  tail(); ctx.strokeStyle = C.fur; ctx.lineWidth = 11; ctx.stroke();
+  ctx.save(); ctx.setLineDash([7, 8]); tail(); ctx.strokeStyle = C.dark; ctx.lineWidth = 11; ctx.stroke(); ctx.restore();
+  ell(ctx, -76 + sw, -124, 6, 6); fs(ctx, C.dark, INK, 2.5);
+  // the body: a long loaf, a touch higher at the shoulders
+  ctx.beginPath();
+  ctx.moveTo(-56, -58);
+  ctx.bezierCurveTo(-60, -84, -20, -84, 10, -82);
+  ctx.bezierCurveTo(40, -84, 60, -78, 58, -56);
+  ctx.bezierCurveTo(56, -38, 30, -34, 10, -36);
+  ctx.bezierCurveTo(-20, -34, -54, -34, -56, -58);
+  ctx.closePath();
+  fs(ctx, C.fur);
+  ctx.save();
+  ctx.clip();
+  // tabby stripes over the back and down the sides
+  for (const xx of [-40, -26, -12, 2, 16, 30]) stripe(ctx, [xx, -86, xx - 3, -70, xx + 1, -54], 5);
+  // white belly and chest
+  ell(ctx, 40, -42, 22, 12, -0.2); fs(ctx, C.white, null);
+  ctx.restore();
+  ctx.restore();
+  // near legs, in front of the body
+  leg(BACK[0], BACK[1] + 2, phase, true);
+  leg(FRONT[0], FRONT[1] + 2, phase + Math.PI, true);
+  // the head, in profile, looking ahead (or up at something)
+  ctx.save();
+  ctx.translate(62, -92);
+  ctx.rotate(-0.32 * look);
+  // ears: the far one peeping out behind the near one
+  ctx.beginPath(); ctx.moveTo(-14, -18); ctx.lineTo(-20, -44); ctx.lineTo(2, -26); ctx.closePath(); fs(ctx, '#76674f');
+  ctx.beginPath(); ctx.moveTo(-4, -24); ctx.lineTo(6, -48); ctx.lineTo(18, -22); ctx.closePath(); fs(ctx, C.fur);
+  ctx.beginPath(); ctx.moveTo(1, -26); ctx.lineTo(7, -40); ctx.lineTo(14, -24); ctx.closePath(); fs(ctx, C.ear, null);
+  ell(ctx, 4, -2, 30, 26); fs(ctx, C.fur);
+  ctx.save();
+  ell(ctx, 4, -2, 28.5, 24.5); ctx.clip();
+  // the forehead stripes, and one along the cheek
+  stripe(ctx, [-6, -28, -4, -20, -2, -13], 4);
+  stripe(ctx, [4, -28, 5, -20, 6, -14], 4);
+  stripe(ctx, [-24, -4, -16, -2, -8, 2], 4);
+  stripe(ctx, [-22, 8, -14, 9, -6, 12], 4);
+  // the white muzzle and chin
+  ell(ctx, 24, 9, 14, 10); fs(ctx, C.white, null);
+  ell(ctx, 16, 17, 12, 7); fs(ctx, C.white, null);
+  ctx.restore();
+  // eye: almond, with a slit pupil (shut when blinking)
+  if (blink) {
+    ctx.beginPath(); ctx.moveTo(8, -6); ctx.quadraticCurveTo(14, -1, 20, -6);
+    ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.stroke();
+  } else {
+    ell(ctx, 14, -6, 6.5, 7); fs(ctx, C.eyes, INK, 2);
+    ell(ctx, 16, -6, 1.8, 5.6); fs(ctx, INK, null);
+    ell(ctx, 17.5, -8.5, 1.3, 1.3); fs(ctx, '#fff', null);
+  }
+  // nose, mouth and whiskers
+  ctx.beginPath(); ctx.moveTo(33, 1); ctx.lineTo(36, 5); ctx.lineTo(31, 6); ctx.closePath(); fs(ctx, C.nose, INK, 1.5);
+  ctx.beginPath(); ctx.moveTo(32, 6); ctx.quadraticCurveTo(31, 12, 25, 13); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+  ctx.strokeStyle = 'rgba(43,29,20,0.45)'; ctx.lineWidth = 1.4;
+  for (const dy of [-1, 4, 9]) { ctx.beginPath(); ctx.moveTo(24, 8 + dy * 0.6); ctx.lineTo(50, 4 + dy * 1.6); ctx.stroke(); }
+  ctx.restore();
+  ctx.restore();
+}

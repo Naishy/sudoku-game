@@ -65,7 +65,11 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .level .status.done { color: var(--mine); }
 .level .status small { display: block; font-weight: 500; color: var(--soft); }
 .level .another { grid-column: 2 / 4; justify-self: start; margin-top: 2px; }
-.home-note { text-align: center; font-family: var(--head); font-style: italic; color: var(--soft); min-height: 1.3em; margin: 16px 0 6px; }
+/* Ziggy's patch of floor on today's page, with the day's note between the two places she
+   likes to sit: she wanders from one to the other and purrs when tapped */
+.home-cat { position: relative; height: 84px; margin: 8px 0 6px; flex: none; }
+.home-ziggy { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: manipulation; }
+.home-note { position: absolute; left: 27%; right: 27%; top: 50%; transform: translateY(-50%); margin: 0; pointer-events: none; text-align: center; font-family: var(--head); font-style: italic; color: var(--soft); font-size: 0.92rem; line-height: 1.3; }
 .home-buttons { display: flex; gap: 10px; justify-content: center; margin: 6px 0 14px; }
 .family-slot { margin-top: auto; }
 

@@ -60,7 +60,7 @@ export function hintText(h) {
 export function revealText(h) {
   const d = h.place[1];
   const a = d === 8 ? 'an' : 'a';
-  return pick([`It's ${a} ${d}. You'd have got there!`, `There: ${a} ${d}. Ziggy purrs.`, `${a === 'an' ? 'An' : 'A'} ${d}. Ziggy knew all along.`]);
+  return pick([`It's ${a} ${d}. Ziggy purrs: you'd have got there!`, `There: ${a} ${d}. Ziggy purrs.`, `${a === 'an' ? 'An' : 'A'} ${d}. Ziggy purrs: she knew all along.`]);
 }
 
 export function mistakeText(n) {
@@ -89,4 +89,22 @@ export function homeNote(doneToday, total) {
   if (doneToday === total) return 'All four hung today. Thanks heaps!';
   if (doneToday === 0) return 'Four new puzzles today. Start wherever you like.';
   return `${doneToday} of ${total} hung today.`;
+}
+
+/** What Ziggy does when you tap her on today's page. */
+const PETTED = [
+  'Ziggy purrs.',
+  'Ziggy slow-blinks at you. In cat, that\'s "I love you".',
+  'Ziggy headbutts your hand, purring.',
+  'Ziggy purrs, then pretends she didn\'t.',
+  'Ziggy stretches, one paw at a time.',
+  'Ziggy wonders if it\'s dinner time yet.',
+  'Ziggy purrs. She likes a good grid.',
+];
+let lastPet = -1;
+export function ziggyPetted() {
+  let i;
+  do i = Math.floor(Math.random() * PETTED.length); while (i === lastPet);
+  lastPet = i;
+  return PETTED[i];
 }
