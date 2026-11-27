@@ -11,7 +11,7 @@ import { Haptics } from './haptics.js';
 import { Telemetry, VERSION } from './telemetry.js';
 import { GIFT, shouldShowGift, markGiftSeen, fromCard } from './gift.js';
 import { drawHeidi } from './cast.js';
-import { drawZiggy, drawZiggySleeping, ZIGGY_BOX } from './ziggy.js';
+import { drawZiggy, ZIGGY_BOX } from './ziggy.js';
 import { Walker, Stroll, seatNear, napSeat } from './walk.js';
 
 const $ = (id) => document.getElementById(id);
@@ -43,7 +43,7 @@ function show(name) {
 const modalOpen = () => ['welcome', 'how', 'settings', 'menu', 'install', 'gift'].some((m) => !$(m).classList.contains('hidden'));
 
 // --- the cast, drawn small ------------------------------------------------------------------
-function face(canvas, who, px, { asleep = false } = {}) {
+function face(canvas, who, px) {
   // Ziggy sits whole beside the bubble (no circle round her); Heidi's portrait is round
   const w = who === 'ziggy' ? Math.round(px * 0.84) : px;
   canvas.width = Math.round(w * DPR);
@@ -57,8 +57,7 @@ function face(canvas, who, px, { asleep = false } = {}) {
     const B = ZIGGY_BOX;
     const s = Math.min(w / (B.right - B.left + 6), px / (B.bottom - B.top + 6));
     const x = (3 - B.left) * s + (w - (B.right - B.left + 6) * s) / 2, y = (3 - B.top) * s;
-    if (who === 'ziggy' && asleep) drawZiggySleeping(ctx, x, y, s, {});
-    else drawZiggy(ctx, x, y, s, { body: true });
+    drawZiggy(ctx, x, y, s, { body: true });
   }
   else drawHeidi(ctx, px / 2, px * 0.5, px / 150, { body: true, mood: 'happy' });
 }
@@ -453,7 +452,7 @@ function maybeNap() {
   if (seat < 0) return;
   lastTouch = performance.now();
   walker.nap(seat);
-  say('ziggy', L.ziggyNapping(), { asleep: true }); napSaid = true;
+  say('ziggy', L.ziggyNapping(), { noFace: true }); napSaid = true; // she's on the grid: no second Ziggy
   tel.log('ziggy-nap', {});
 }
 
@@ -482,11 +481,12 @@ function fitGrid() {
 window.addEventListener('resize', fitGrid);
 
 const sayFaceSize = () => (innerHeight <= 700 ? 76 : 86);
-function say(who, text, { coach = false, asleep = false } = {}) {
+function say(who, text, { coach = false, noFace = false } = {}) {
   const box = $('say');
   box.classList.toggle('coach', coach);
   if (!who) { box.classList.remove('on'); return; }
-  face($('say-face'), who, sayFaceSize(), { asleep });
+  face($('say-face'), who, sayFaceSize());
+  $('say-face').style.display = noFace ? 'none' : '';
   $('say-text').textContent = text;
   box.classList.add('on');
 }
