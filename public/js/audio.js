@@ -54,22 +54,32 @@ export class Sound {
     const t = this.now() + 0.08;
     [0, 2, 4].forEach((k, i) => this.mallet(ROOT + 12 + SCALE[(d - 1 + k) % 9], t + i * 0.07, 0.12));
   }
-  // a purr: a soft low hum, pulsing as a cat's does (no noise)
-  purr() {
+  // A purr, made the way a cat makes one: a buzz of about 25 pulses a second (each a
+  // flutter of the voice box), rounded off and soft, in long breaths out and shorter
+  // breaths in, a touch higher and quieter on the in-breath. A low sawtooth filtered
+  // warm gives the flutter its rumble, which phone speakers can still play. No noise.
+  purr(vol = 1) {
     if (!this.ok()) return;
-    const c = this.ctx, t = this.now(), dur = 1.6;
-    const o = c.createOscillator(); o.type = 'triangle'; o.frequency.value = 96;
-    const g = c.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.22, t + 0.25);
-    g.gain.setValueAtTime(0.22, t + dur - 0.5);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    const pulse = c.createGain(); pulse.gain.value = 0.5;
-    const lfo = c.createOscillator(); lfo.frequency.value = 24;
-    const depth = c.createGain(); depth.gain.value = 0.5;
-    lfo.connect(depth).connect(pulse.gain);
-    o.connect(pulse).connect(g).connect(this.out);
-    o.start(t); lfo.start(t); o.stop(t + dur + 0.05); lfo.stop(t + dur + 0.05);
+    const c = this.ctx, t0 = this.now();
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; lp.Q.value = 0.8;
+    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 70;
+    const g = c.createGain(); g.gain.value = 0.0001;
+    lp.connect(hp).connect(g).connect(this.out);
+    const o = c.createOscillator(); o.type = 'sawtooth';
+    o.connect(lp);
+    // out, in, out
+    const breaths = [[0.95, 24, 0.55], [0.7, 27, 0.32], [0.95, 23.5, 0.5]];
+    let t = t0;
+    o.frequency.setValueAtTime(breaths[0][1], t);
+    for (const [dur, hz, level] of breaths) {
+      const v = level * vol;
+      o.frequency.setTargetAtTime(hz, t, 0.05);
+      g.gain.setTargetAtTime(v, t, 0.09);
+      g.gain.setTargetAtTime(v * 0.75, t + dur * 0.5, 0.15);
+      g.gain.setTargetAtTime(0.0001, t + dur - 0.14, 0.04);
+      t += dur;
+    }
+    o.start(t0); o.stop(t + 0.3);
   }
   hint() { if (this.ok()) { const t = this.now(); this.mallet(ROOT + 19, t, 0.12); this.mallet(ROOT + 24, t + 0.1, 0.1); } }
   finish() {

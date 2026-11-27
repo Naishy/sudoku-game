@@ -38,7 +38,6 @@ function show(name) {
   for (const s of SCREENS) $(s).classList.toggle('hidden', s !== name);
   if (name !== 'play') walker?.hide();
   if (name !== 'home') homeCat?.hide();
-  if (name !== 'finish') finCat?.hide();
   if (name === 'home') { renderHome(); homeCat?.enter(); if (updateReady) location.reload(); }
 }
 const modalOpen = () => ['welcome', 'how', 'settings', 'menu', 'install', 'gift'].some((m) => !$(m).classList.contains('hidden'));
@@ -164,8 +163,7 @@ function buildBoard() {
 buildBoard();
 const walker = new Walker($('ziggy-walk'), $('grid'));
 
-// Ziggy about the place: wandering on today's page, and come to see each finished work.
-// Tap her and she purrs.
+// Ziggy about today's page, wandering from one side to the other. Tap her and she purrs.
 function petZiggy(where) {
   sound.purr(); haptics.purr();
   tel.log('ziggy-pet', { where });
@@ -182,8 +180,6 @@ const homeCat = new Stroll($('home-ziggy'), {
     noteTimer = setTimeout(() => { if (screen === 'home') renderHome(); }, 4500);
   },
 });
-// she sits by the bottom right-hand corner of the frame
-const finCat = new Stroll($('fin-ziggy'), { size: 64, seat: (w) => w - 70 - 8, onTap: () => petZiggy('finish') });
 
 function openPuzzle(key, { daily, day, palette, tutorial = null }) {
   const f = tutorial ? null : fromKey(key);
@@ -327,6 +323,8 @@ function hint() {
     G.sel = i; G.digit = d;
     G.pending = null;
     sound.place(d);
+    // Ziggy purrs, then strolls off
+    walker.purr(); sound.purr(0.6); haptics.purr();
     say('ziggy', L.revealText(p.h));
     render(); save();
     coachEvent('place', i, d);
@@ -539,7 +537,6 @@ function showFinish(work, { score, newBest }) {
   $('fin-home').textContent = 'Lovely';
   show('finish');
   animatePainting($('finish-canvas'), work.key, f.level, work.palette, frameSize());
-  finCat.enter({ from: 'right', delay: 1500 });
   $('fin-save').onclick = () => sharePicture(work);
 }
 

@@ -60,7 +60,7 @@ export function hintText(h) {
 export function revealText(h) {
   const d = h.place[1];
   const a = d === 8 ? 'an' : 'a';
-  return pick([`It's ${a} ${d}. You'd have got there!`, `There: ${a} ${d}. Ziggy purrs.`, `${a === 'an' ? 'An' : 'A'} ${d}. Ziggy knew all along.`]);
+  return pick([`It's ${a} ${d}. Ziggy purrs: you'd have got there!`, `There: ${a} ${d}. Ziggy purrs.`, `${a === 'an' ? 'An' : 'A'} ${d}. Ziggy purrs: she knew all along.`]);
 }
 
 export function mistakeText(n) {

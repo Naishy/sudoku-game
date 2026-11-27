@@ -6,6 +6,7 @@
 import { drawZiggy, drawZiggyWalking, ZIGGY_BOX, ZIGGY_WALK_BOX } from './ziggy.js';
 
 const WALK_MS = 950;
+const PURR_MS = 2600; // a purr: the sound, the closed eyes and the little lines
 const TURN_MS = 220; // turning from walking to sitting, and back
 const reduceMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const ease = (k) => 1 - Math.pow(1 - k, 3);
@@ -65,12 +66,22 @@ export class Walker {
     this.face = 1; // 1 = facing right
     this.dist = 0; // how far she's walked, in cells: it sets her stride
     this.sat = 0; // when she sat down
+    this.purrAt = -1e9;
+    this.leaveTimer = 0;
     this.raf = 0;
+  }
+
+  /** A purr where she sits (she stays put till it's done). */
+  purr() {
+    if (this.state !== 'sitting') return;
+    this.purrAt = performance.now();
+    if (!this.raf) this.raf = requestAnimationFrame((t) => this.frame(t));
   }
 
   /** Walk over and sit in this square (0–80). */
   sitAt(i) {
     if (i == null || i < 0) { this.leave(); return; }
+    clearTimeout(this.leaveTimer);
     if (this.seat === i && this.state !== 'walking-out') return;
     const col = i % 9, row = Math.floor(i / 9);
     let from;
@@ -82,6 +93,13 @@ export class Walker {
 
   leave() {
     if (this.state === 'away' || this.state === 'walking-out') return;
+    // mid-purr, she finishes it first
+    const left = PURR_MS - (performance.now() - this.purrAt);
+    if (this.state === 'sitting' && left > 0) {
+      clearTimeout(this.leaveTimer);
+      this.leaveTimer = setTimeout(() => this.leave(), left);
+      return;
+    }
     this.seat = -1;
     this.go({ x: this.x, y: this.y }, { x: this.x <= 4 ? -1.6 : 10.6, y: this.y }, 'walking-out');
   }
@@ -125,14 +143,17 @@ export class Walker {
     let sit = walking ? 0 : Math.min(1, (now - this.sat) / TURN_MS);
     if (this.state === 'walking-out') sit = Math.max(0, 1 - (now - this.t0) / TURN_MS);
     const t = now / 1000;
-    const blink = sit === 1 && (t % 3.4) < 0.14;
+    const purring = now - this.purrAt < PURR_MS;
+    const blink = sit === 1 && (purring || (t % 3.4) < 0.14);
     drawCat(ctx, cx, foot, cell * 0.98, { sit, phase: this.dist * Math.PI * 2 / 0.95, face: this.face, t, blink });
+    if (purring) drawPurr(ctx, cx, foot - cell * 0.98 * 0.98, cell * 0.98, (now - this.purrAt) / PURR_MS);
     // keep going while she walks, swishes her tail and blinks
     this.raf = requestAnimationFrame((tt) => this.frame(tt));
   }
 
   /** Off the grid at once (leaving a puzzle). */
   hide() {
+    clearTimeout(this.leaveTimer);
     this.state = 'away'; this.seat = -1;
     if (this.raf) cancelAnimationFrame(this.raf);
     this.raf = 0;
@@ -142,7 +163,7 @@ export class Walker {
 }
 
 /**
- * Ziggy strolling about a canvas of her own (today's page, a finished work): she walks in
+ * Ziggy strolling about a canvas of her own (today's page): she walks in
  * from one side and sits at a spot; now and then she gets up and wanders to another; tap
  * her and she purrs. `seat(width)` gives the x to sit at; `size` is her sitting height (px).
  */
@@ -218,10 +239,10 @@ export class Stroll {
     let sit = 0;
     if (this.state === 'sitting') sit = Math.min(1, (now - this.sat) / TURN_MS);
     else if (this.state === 'waiting' && this.getUp) sit = Math.max(0, 1 - (now - this.getUp) / TURN_MS);
-    const purring = now - this.purrAt < 2600;
+    const purring = now - this.purrAt < PURR_MS;
     const blink = sit === 1 && (purring || (t % 4.1) < 0.14);
     drawCat(this.ctx, this.x, c.height - 2, this.size, { sit, phase: this.dist / this.size * Math.PI * 2 / 0.62, face: this.face, t, blink });
-    if (purring) drawPurr(this.ctx, this.x, c.height - this.size * 0.98, this.size, (now - this.purrAt) / 2600);
+    if (purring) drawPurr(this.ctx, this.x, c.height - this.size * 0.98, this.size, (now - this.purrAt) / PURR_MS);
     this.raf = requestAnimationFrame((tt) => this.frame(tt));
   }
 
@@ -235,7 +256,7 @@ export class Stroll {
 }
 
 // a purr: soft curved lines rising beside her head and fading
-function drawPurr(ctx, x, top, size, k) {
+export function drawPurr(ctx, x, top, size, k) {
   ctx.save();
   ctx.strokeStyle = '#7a7166';
   ctx.lineCap = 'round';

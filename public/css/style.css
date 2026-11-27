@@ -140,10 +140,7 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 
 
 /* --- the gallery ---------------------------------------------------------------------- */
-.gallery-wall { background: var(--wall); overflow-x: hidden; }
-/* Ziggy comes to sit by the corner of a finished work */
-.frame-wrap { position: relative; }
-.frame-cat { position: absolute; left: -70px; right: -70px; bottom: -14px; width: calc(100% + 140px); height: 96px; touch-action: manipulation; }
+.gallery-wall { background: var(--wall); }
 .finish-inner { display: flex; flex-direction: column; align-items: center; gap: 16px; margin: auto 0; padding: 10px 0; }
 .frame { padding: 14px; background: #fff; box-shadow: 0 0 0 1px #ddd6c9, 0 18px 40px rgba(40, 30, 20, 0.18); }
 .frame canvas { display: block; }
@@ -159,7 +156,7 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .fin-best { font-size: 0.85rem; font-weight: 600; color: var(--mine); min-height: 1.2em; }
 .fin-family { font-size: 0.85rem; margin-top: 4px; }
 .fin-heidi { font-family: var(--head); font-style: italic; text-align: center; margin: 0; }
-#finish .frame-wrap, #finish .wall-label, #finish .finish-score, #finish .fin-heidi, #finish .row { animation: rise 0.6s ease-out both; }
+#finish .frame, #finish .wall-label, #finish .finish-score, #finish .fin-heidi, #finish .row { animation: rise 0.6s ease-out both; }
 #finish .wall-label { animation-delay: 1.5s; }
 #finish .finish-score { animation-delay: 1.8s; }
 #finish .fin-heidi { animation-delay: 2.1s; }
