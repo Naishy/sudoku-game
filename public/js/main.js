@@ -611,7 +611,7 @@ async function sharePicture(w) {
   if (!blob) return;
   const name = `${lab.title.replace(/[^\w &]+/g, '').trim()}.png`;
   const file = new File([blob], name, { type: 'image/png' });
-  tel.log('share-picture', { key: w.key });
+  tel.log('save-picture', { key: w.key });
   try {
     if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: lab.title }); return; }
   } catch { return; /* cancelled */ }
