@@ -73,7 +73,6 @@ function renderHome() {
   sw.innerHTML = '';
   for (const c of PALETTES[palette].colours) { const i = el('i'); i.style.background = c; sw.append(i); }
   $('today-palette').textContent = `Today's colours: ${PALETTES[palette].name}`;
-  $('opening').textContent = `“${L.openingLine(day, date, PALETTES[palette].name)}”`;
   face($('portrait'), 'heidi', 96);
   const works = store.works();
   const done = new Map(works.map((w) => [w.key, w]));

@@ -7,7 +7,7 @@ export const GIFT = {
   showFrom: '2026-12-25', // local date
   heading: 'Happy Christmas, Heidi! 🎄',
   message: [
-    'A new Sudoku every morning, at four levels from a gentle Sketch to a fiendish Masterpiece. Take your time: the kettle can wait.',
+    'A new Sudoku every morning, at four levels from a gentle Sketch to a fiendish Masterpiece. Take your time: the coffee can wait.',
     'Every grid you finish becomes a painting, in the day\'s colours. Ziggy\'s on hand if you get stuck. By next Christmas you\'ll have a whole exhibition.',
     'Mel\'s doing them too, so the family board will show who\'s quickest. No pressure, darl. ❤️',
   ],
