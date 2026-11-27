@@ -11,7 +11,7 @@ import { Haptics } from './haptics.js';
 import { Telemetry, VERSION } from './telemetry.js';
 import { GIFT, shouldShowGift, markGiftSeen, fromCard } from './gift.js';
 import { drawHeidi } from './cast.js';
-import { drawZiggi } from './ziggi.js';
+import { drawZiggi, ZIGGI_BOX } from './ziggi.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -41,14 +41,20 @@ const modalOpen = () => ['welcome', 'how', 'settings', 'menu', 'install', 'gift'
 
 // --- the cast, drawn small ------------------------------------------------------------------
 function face(canvas, who, px) {
-  canvas.width = Math.round(px * DPR);
+  // Ziggi sits whole beside the bubble (no circle round her); Heidi's portrait is round
+  const w = who === 'ziggi' ? Math.round(px * 0.84) : px;
+  canvas.width = Math.round(w * DPR);
   canvas.height = Math.round(px * DPR);
-  canvas.style.width = `${px}px`;
+  canvas.style.width = `${w}px`;
   canvas.style.height = `${px}px`;
   const ctx = canvas.getContext('2d');
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ctx.clearRect(0, 0, px, px);
-  if (who === 'ziggi') drawZiggi(ctx, px / 2, px * 0.56, px / 90, { body: false });
+  ctx.clearRect(0, 0, w, px);
+  if (who === 'ziggi') {
+    const B = ZIGGI_BOX;
+    const s = Math.min(w / (B.right - B.left + 6), px / (B.bottom - B.top + 6));
+    drawZiggi(ctx, (3 - B.left) * s + (w - (B.right - B.left + 6) * s) / 2, (3 - B.top) * s, s, { body: true });
+  }
   else drawHeidi(ctx, px / 2, px * 0.5, px / 150, { body: true, mood: 'happy' });
 }
 
@@ -397,18 +403,20 @@ function fitGrid() {
   for (const child of play.children) {
     if (child.classList.contains('grid-wrap') || child.classList.contains('hidden')) continue;
     const st = getComputedStyle(child);
-    used += child.offsetHeight + parseFloat(st.marginTop) + parseFloat(st.marginBottom);
+    // the tools' top margin is 'auto' (it pins them to the bottom): that's spare space, not used
+    used += child.offsetHeight + (child.classList.contains('tools') ? 0 : parseFloat(st.marginTop)) + parseFloat(st.marginBottom);
   }
   const size = Math.floor(Math.min(play.clientWidth - 20, 540, play.clientHeight - used - 2));
   $('grid').style.setProperty('--size', `${Math.max(220, size)}px`);
 }
 window.addEventListener('resize', fitGrid);
 
+const sayFaceSize = () => (innerHeight <= 700 ? 76 : 86);
 function say(who, text, { coach = false } = {}) {
   const box = $('say');
   box.classList.toggle('coach', coach);
   if (!who) { box.classList.remove('on'); return; }
-  face($('say-face'), who, 46);
+  face($('say-face'), who, sayFaceSize());
   $('say-text').textContent = text;
   box.classList.add('on');
 }
