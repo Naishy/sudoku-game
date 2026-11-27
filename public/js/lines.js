@@ -114,6 +114,15 @@ const NAPPING = [
   'Ziggy thinks a quiet grid is a good place for a sleep. Tap anywhere to wake her.',
   'Ziggy has settled on the grid, as cats do. She\'ll move when you carry on.',
 ];
+/** When she meows at nothing in particular on today's page. */
+const MEOWED = [
+  'Ziggy meows. Probably about dinner.',
+  'Ziggy meows at the door. Then doesn\'t go out.',
+  'Ziggy meows, just to check you\'re still there.',
+  'Ziggy meows. She has opinions about the colours today.',
+  'Ziggy meows at something only she can see.',
+];
+export const ziggyMeowed = () => MEOWED[Math.floor(Math.random() * MEOWED.length)];
 export const ziggyWoken = () => WOKEN[Math.floor(Math.random() * WOKEN.length)];
 export const ziggyNapping = () => NAPPING[Math.floor(Math.random() * NAPPING.length)];
 let lastPet = -1;

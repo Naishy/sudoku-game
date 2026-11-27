@@ -44,7 +44,7 @@ export function groomPose(kind, k, t = 0) {
   return { lift: L, px: 17, py: 27 + Math.sin(t * 9) * 2, tilt: -0.1 * L, tongue: L > 0.9 && Math.sin(t * 9) > 0 ? 1 : 0 };
 }
 
-export function drawZiggy(ctx, x, y, s = 1, { t = 0, blink = false, body = true, groom = null } = {}) {
+export function drawZiggy(ctx, x, y, s = 1, { t = 0, blink = false, body = true, groom = null, meow = 0 } = {}) {
   const C = COAT;
   ctx.save();
   ctx.translate(x, y);
@@ -88,7 +88,7 @@ export function drawZiggy(ctx, x, y, s = 1, { t = 0, blink = false, body = true,
   }
   const g = groom ? groomPose(groom.kind, groom.k, t) : null;
   if (g) { ctx.save(); ctx.translate(0, 20); ctx.rotate(g.tilt); ctx.translate(0, -20); }
-  drawHead(ctx, { blink: blink || !!(g && g.lift > 0.5), tongue: g?.tongue });
+  drawHead(ctx, { blink: blink || !!(g && g.lift > 0.5), tongue: g?.tongue, meow: g ? 0 : meow });
   if (g) ctx.restore();
   // the washing paw, up in front of her face
   if (g && g.lift > 0.05) {
@@ -102,7 +102,7 @@ export function drawZiggy(ctx, x, y, s = 1, { t = 0, blink = false, body = true,
 }
 
 /** Her head, facing you, centred on (0, 0). Used sitting, washing and asleep. */
-function drawHead(ctx, { blink = false, tongue = 0, sleep = false } = {}) {
+function drawHead(ctx, { blink = false, tongue = 0, sleep = false, meow = 0 } = {}) {
   const C = COAT;
   // ears
   for (const k of [-1, 1]) {
@@ -145,8 +145,17 @@ function drawHead(ctx, { blink = false, tongue = 0, sleep = false } = {}) {
   }
   // nose and mouth
   ctx.beginPath(); ctx.moveTo(-4, 6); ctx.lineTo(4, 6); ctx.lineTo(0, 10); ctx.closePath(); fs(ctx, C.nose, INK, 1.5);
-  ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(0, 13); ctx.moveTo(-7, 15); ctx.quadraticCurveTo(-3, 18, 0, 13); ctx.quadraticCurveTo(3, 18, 7, 15);
-  ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+  if (meow > 0.05) { // mouth open (0 to 1), a pink tongue at the bottom
+    const h = 3 + meow * 8, w = 5 + meow * 2.5;
+    ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(0, 12.5); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+    ell(ctx, 0, 13 + h / 2, w, h / 2); fs(ctx, '#5a2a2a', INK, 2);
+    ctx.save(); ell(ctx, 0, 13 + h / 2, w, h / 2); ctx.clip();
+    ell(ctx, 0, 13 + h, w * 0.8, h * 0.4); fs(ctx, '#e58a8f', null);
+    ctx.restore();
+  } else {
+    ctx.beginPath(); ctx.moveTo(0, 10); ctx.lineTo(0, 13); ctx.moveTo(-7, 15); ctx.quadraticCurveTo(-3, 18, 0, 13); ctx.quadraticCurveTo(3, 18, 7, 15);
+    ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+  }
   if (tongue) { ell(ctx, 4, 18, 4, 4.5, -0.4); fs(ctx, '#e58a8f', INK, 1.5); }
   // whiskers
   ctx.strokeStyle = 'rgba(43,29,20,0.45)'; ctx.lineWidth = 1.4;

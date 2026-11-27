@@ -13,6 +13,20 @@ const LIE_MS = 700; // curling up to sleep, and sitting up again
 const GROOM_MS = 4200; // one wash: a paw licked, or a face wiped
 const ZZZ_AFTER = 1500; // asleep this long before the z's start
 const rand = (a, b) => a + Math.random() * (b - a);
+/**
+ * A meow, now and then: `o.onMeow(kind)` plays it (and says how long it lasts, in
+ * seconds) after `delay` ms, and her mouth opens with it. See mouthAt.
+ */
+function startMeow(o, kind, delay = 0, play = o.onMeow) {
+  if (!play) return;
+  o.meowAt = performance.now() + delay; o.meowMs = kind === 'mrrp' ? 300 : 680;
+  setTimeout(() => { const d = play(kind); if (d) o.meowMs = d * 1000; }, delay);
+}
+/** How far open her mouth is (0 to 1) for a meow under way. */
+function mouthAt(o, now) {
+  const k = (now - (o.meowAt ?? -1e9)) / (o.meowMs || 1);
+  return k > 0 && k < 1 ? Math.pow(Math.sin(k * Math.PI), 0.6) : 0;
+}
 /** How far curled up she is (0 sitting, 1 asleep), easing between the two. */
 function lieAt(o, now) {
   const k = Math.min(1, Math.max(0, (now - o.lieT0) / LIE_MS));
@@ -39,7 +53,7 @@ const sizeCanvas = (cv) => {
  * Ziggy at (cx, foot), `size` px tall when sitting (the same scale when walking). `sit` is
  * 0 for walking side on, 1 for sitting facing you, and in between while she turns.
  */
-export function drawCat(ctx, cx, foot, size, { sit = 1, phase = 0, face = 1, t = 0, blink = false, look = 0, shadow = true, lie = 0, groom = null } = {}) {
+export function drawCat(ctx, cx, foot, size, { sit = 1, phase = 0, face = 1, t = 0, blink = false, look = 0, shadow = true, lie = 0, groom = null, meow = 0 } = {}) {
   const B = ZIGGY_BOX, W = ZIGGY_WALK_BOX;
   const s = size / (B.bottom - B.top);
   ctx.save();
@@ -60,7 +74,7 @@ export function drawCat(ctx, cx, foot, size, { sit = 1, phase = 0, face = 1, t =
     ctx.save();
     ctx.globalAlpha *= sit * (1 - lie);
     ctx.scale(face, 1);
-    drawZiggy(ctx, -((B.right + B.left) / 2) * s, -B.bottom * s, s, { t, blink, body: true, groom });
+    drawZiggy(ctx, -((B.right + B.left) / 2) * s, -B.bottom * s, s, { t, blink, body: true, groom, meow });
     ctx.restore();
   }
   if (sit > 0 && lie > 0) {
@@ -92,6 +106,7 @@ export class Walker {
     this.napping = false; // she came to sleep, not to point at a hint
     this.lieFrom = 0; this.lieTo = 0; this.lieT0 = 0;
     this.groomAt = -1e9; this.groomKind = 'paw'; this.nextGroom = 0;
+    this.onMeow = null; // (kind) => seconds: plays a meow
   }
 
   /** Asleep (or curling up, or still waking): anything you do should wake her. */
@@ -148,7 +163,12 @@ export class Walker {
     this.groomAt = -1e9;
     // asleep, she sits up first (and stretches) before she goes anywhere
     const lie = lieAt(this, now);
-    if (lie > 0 || this.lieTo > 0) { this.t0 = now + LIE_MS * Math.max(lie, 0.3) + 250; setLie(this, 0, now); }
+    if (lie > 0 || this.lieTo > 0) {
+      const up = LIE_MS * Math.max(lie, 0.3);
+      this.t0 = now + up + 250; setLie(this, 0, now);
+      // woken from a nap, she sometimes says so (a grumbly little mrrp) before she goes
+      if (lie > 0.9 && Math.random() < 0.3) { startMeow(this, 'mrrp', up * 0.7); this.t0 += 350; }
+    }
     this.dist = 0;
     if (to.x !== from.x) this.face = to.x > from.x ? 1 : -1;
     if (reduceMotion()) { this.x = to.x; this.y = to.y; this.state = state === 'walking-out' ? 'away' : 'sitting'; this.sat = 0; }
@@ -198,7 +218,7 @@ export class Walker {
     const t = now / 1000;
     const purring = now - this.purrAt < PURR_MS;
     const blink = sit === 1 && (purring || (t % 3.4) < 0.14);
-    drawCat(ctx, cx, foot, cell * 0.98, { sit, phase: this.dist * Math.PI * 2 / 0.95, face: this.face, t, blink, lie, groom });
+    drawCat(ctx, cx, foot, cell * 0.98, { sit, phase: this.dist * Math.PI * 2 / 0.95, face: this.face, t, blink, lie, groom, meow: mouthAt(this, now) });
     if (purring) drawPurr(ctx, cx, foot - cell * 0.98 * 0.98, cell * 0.98, (now - this.purrAt) / PURR_MS);
     if (lie === 1 && this.lieTo === 1 && now - this.lieT0 > LIE_MS + ZZZ_AFTER) drawZzz(ctx, cx + cell * 0.1, foot - cell * 0.5, cell, t);
     // keep going while she walks, swishes her tail and blinks
@@ -223,13 +243,14 @@ export class Walker {
  * her and she purrs. `seat(width)` gives the x to sit at; `size` is her sitting height (px).
  */
 export class Stroll {
-  constructor(canvas, { size = 70, seat = (w) => w / 2, wander = null, onTap = null } = {}) {
+  constructor(canvas, { size = 70, seat = (w) => w / 2, wander = null, onTap = null, onMeow = null } = {}) {
     this.cv = canvas;
     this.ctx = canvas.getContext('2d');
     this.size = size;
     this.seatOf = seat;
     this.wander = wander; // (width) => x to wander to, or null to stay put
     this.onTap = onTap;
+    this.onMeow = onMeow; // (kind, why) => seconds: plays a meow ('hello', 'woken', 'idle')
     this.state = 'away';
     this.x = 0; this.face = 1; this.dist = 0;
     this.raf = 0; this.purrAt = -1e9; this.nextWander = 0;
@@ -241,14 +262,21 @@ export class Stroll {
       const px = e.clientX - r.left, py = e.clientY - r.top;
       if (Math.abs(px - this.x) < this.size * 0.75 && py > r.height - this.size * 1.15) {
         const woke = this.wake();
-        this.purr(woke ? LIE_MS : 0);
-        this.onTap?.({ woke });
+        let delay = woke ? LIE_MS : 0;
+        // woken, she sometimes mrrps before the purr
+        if (woke && Math.random() < 0.35) { this.meow('mrrp', 'woken', LIE_MS * 0.8); delay += 450; }
+        this.purr(delay);
+        this.onTap?.({ woke, delay });
       }
     });
   }
 
   /** Asleep (or nodding off)? */
   get asleep() { return this.lieTo > 0; }
+
+  meow(kind, why, delay = 0) {
+    if (this.onMeow) startMeow(this, kind, delay, (k) => this.onMeow(k, why));
+  }
 
   /** Sit up, if she's asleep. Says whether she was. */
   wake() {
@@ -286,6 +314,9 @@ export class Stroll {
     // late at night she's soon asleep; otherwise after a while she may doze off
     const h = new Date().getHours();
     this.nextSleep = start + (h >= 22 || h < 6 ? rand(4000, 6000) : rand(30000, 50000));
+    // very occasionally a hello when she arrives, and a meow about something later on
+    this.greet = Math.random() < 0.2;
+    this.nextMeow = Math.random() < 0.5 ? start + rand(25000, 90000) : Infinity;
     this.raf = requestAnimationFrame((t) => this.frame(t));
   }
 
@@ -319,14 +350,16 @@ export class Stroll {
         this.state = 'sitting'; this.sat = now;
         this.nextWander = now + 16000 + Math.random() * 16000;
         this.nextGroom = Math.max(this.nextGroom, now + rand(5000, 8000));
+        if (this.greet) { this.greet = false; this.meow('mrrp', 'hello', 450); }
       }
     }
     if (this.state === 'waiting') { this.raf = requestAnimationFrame((t) => this.frame(t)); return; }
     const quiet = now - this.purrAt > 4000;
     if (this.state === 'sitting' && this.asleep) {
       if (now > this.wakeAt) this.wake(); // she wakes by herself in the end
-    } else if (this.state === 'sitting' && quiet && now - this.groomAt > GROOM_MS) {
-      if (now > this.nextSleep) this.sleep(now);
+    } else if (this.state === 'sitting' && quiet && now - this.groomAt > GROOM_MS && lieAt(this, now) === 0) {
+      if (now > this.nextMeow) { this.nextMeow = Infinity; this.meow('meow', 'idle'); this.nextGroom = Math.max(this.nextGroom, now + 3000); this.nextWander = Math.max(this.nextWander, now + 3000); this.nextSleep = Math.max(this.nextSleep, now + 3000); }
+      else if (now > this.nextSleep) this.sleep(now);
       // now and then she wanders somewhere else
       else if (this.wander && now > this.nextWander && !reduceMotion()) {
         this.walkTo(this.wander(c.width, this.x), now + TURN_MS);
@@ -344,7 +377,8 @@ export class Stroll {
     const blink = sit === 1 && (purring || (t % 4.1) < 0.14);
     const lie = this.state === 'sitting' ? lieAt(this, now) : 0;
     const groom = this.state === 'sitting' && lie === 0 && now - this.groomAt < GROOM_MS ? { kind: this.groomKind, k: (now - this.groomAt) / GROOM_MS } : null;
-    drawCat(this.ctx, this.x, c.height - 2, this.size, { sit, phase: this.dist / this.size * Math.PI * 2 / 0.62, face: this.face, t, blink, lie, groom });
+    const meow = this.state === 'sitting' && lie < 0.5 ? mouthAt(this, now) : 0;
+    drawCat(this.ctx, this.x, c.height - 2, this.size, { sit, phase: this.dist / this.size * Math.PI * 2 / 0.62, face: this.face, t, blink: blink && !meow, lie, groom: meow ? null : groom, meow });
     if (purring) drawPurr(this.ctx, this.x, c.height - this.size * 0.98, this.size, (now - this.purrAt) / PURR_MS);
     if (lie === 1 && this.lieTo === 1 && now - this.lieT0 > LIE_MS + ZZZ_AFTER) drawZzz(this.ctx, this.x + this.size * 0.1, c.height - this.size * 0.5, this.size, t);
     this.raf = requestAnimationFrame((tt) => this.frame(tt));

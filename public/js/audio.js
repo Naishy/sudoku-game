@@ -81,6 +81,43 @@ export class Sound {
     }
     o.start(t0); o.stop(t + 0.3);
   }
+  // A meow, made in code like the purr: a buzzy voice (a sawtooth) shaped by two formant
+  // filters that slide from "ee" through "ah" to "oo" (mi-a-ow), its pitch rising then
+  // falling, with a touch of wobble. 'meow' is the full one; 'mrrp' is the short, rising
+  // chirrup a cat says hello with. `pitch` scales it so no two are quite the same.
+  meow(kind = 'meow', pitch = 1, vol = 1) {
+    if (!this.ok()) return 0;
+    const c = this.ctx, t0 = this.now();
+    const short = kind === 'mrrp';
+    const dur = short ? 0.3 : 0.68;
+    const o = c.createOscillator(); o.type = 'sawtooth';
+    const vib = c.createOscillator(); vib.frequency.value = short ? 22 : 6; // a mrrp rolls
+    const vg = c.createGain(); vg.gain.value = short ? 40 : 9;
+    vib.connect(vg).connect(o.frequency);
+    const f = (v) => v * pitch;
+    const P = short ? [[0, 420], [0.55, 640], [1, 700]] : [[0, 560], [0.3, 820], [0.62, 700], [1, 430]];
+    const F1 = short ? [[0, 400], [1, 750]] : [[0, 330], [0.35, 850], [0.7, 700], [1, 420]];
+    const F2 = short ? [[0, 1800], [1, 1400]] : [[0, 2300], [0.35, 1400], [0.7, 1050], [1, 800]];
+    const ramp = (param, pts, k = 1) => {
+      param.setValueAtTime(pts[0][1] * k, t0);
+      for (const [u, v] of pts.slice(1)) param.linearRampToValueAtTime(v * k, t0 + u * dur);
+    };
+    ramp(o.frequency, P.map(([u, v]) => [u, f(v)]));
+    const g = c.createGain(); g.gain.value = 0;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.32 * vol, t0 + (short ? 0.03 : 0.06));
+    g.gain.setTargetAtTime(0.24 * vol, t0 + dur * 0.4, 0.1);
+    g.gain.setTargetAtTime(0.0001, t0 + dur - (short ? 0.06 : 0.14), 0.04);
+    for (const [pts, q, lvl] of [[F1, 5, 1], [F2, 7, 0.55]]) {
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = q;
+      ramp(bp.frequency, pts, pitch);
+      const lg = c.createGain(); lg.gain.value = lvl;
+      o.connect(bp).connect(lg).connect(g);
+    }
+    g.connect(this.out);
+    o.start(t0); vib.start(t0); o.stop(t0 + dur + 0.3); vib.stop(t0 + dur + 0.3);
+    return dur;
+  }
   hint() { if (this.ok()) { const t = this.now(); this.mallet(ROOT + 19, t, 0.12); this.mallet(ROOT + 24, t + 0.1, 0.1); } }
   finish() {
     if (!this.ok()) return;
