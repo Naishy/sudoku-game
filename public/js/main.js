@@ -11,7 +11,7 @@ import { Haptics } from './haptics.js';
 import { Telemetry, VERSION } from './telemetry.js';
 import { GIFT, shouldShowGift, markGiftSeen, fromCard } from './gift.js';
 import { drawHeidi } from './cast.js';
-import { drawZiggi } from './ziggi.js';
+import { drawZiggy, ZIGGY_BOX } from './ziggy.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -41,14 +41,20 @@ const modalOpen = () => ['welcome', 'how', 'settings', 'menu', 'install', 'gift'
 
 // --- the cast, drawn small ------------------------------------------------------------------
 function face(canvas, who, px) {
-  canvas.width = Math.round(px * DPR);
+  // Ziggy sits whole beside the bubble (no circle round her); Heidi's portrait is round
+  const w = who === 'ziggy' ? Math.round(px * 0.84) : px;
+  canvas.width = Math.round(w * DPR);
   canvas.height = Math.round(px * DPR);
-  canvas.style.width = `${px}px`;
+  canvas.style.width = `${w}px`;
   canvas.style.height = `${px}px`;
   const ctx = canvas.getContext('2d');
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ctx.clearRect(0, 0, px, px);
-  if (who === 'ziggi') drawZiggi(ctx, px / 2, px * 0.56, px / 90, { body: false });
+  ctx.clearRect(0, 0, w, px);
+  if (who === 'ziggy') {
+    const B = ZIGGY_BOX;
+    const s = Math.min(w / (B.right - B.left + 6), px / (B.bottom - B.top + 6));
+    drawZiggy(ctx, (3 - B.left) * s + (w - (B.right - B.left + 6) * s) / 2, (3 - B.top) * s, s, { body: true });
+  }
   else drawHeidi(ctx, px / 2, px * 0.5, px / 150, { body: true, mood: 'happy' });
 }
 
@@ -272,7 +278,7 @@ function afterChange() {
   checkDone();
 }
 
-// --- Ziggi's hints ----------------------------------------------------------------------------
+// --- Ziggy's hints ----------------------------------------------------------------------------
 function hint() {
   if (!G || G.done) return;
   sound.hint(); haptics.hint();
@@ -283,7 +289,7 @@ function hint() {
       pushUndo();
       for (const i of p.wrong) G.values[i] = 0;
       G.pending = null;
-      say('ziggi', 'There. Off you go again!');
+      say('ziggy', 'There. Off you go again!');
       render(); save();
       return;
     }
@@ -295,7 +301,7 @@ function hint() {
     G.sel = i; G.digit = d;
     G.pending = null;
     sound.place(d);
-    say('ziggi', L.revealText(p.h));
+    say('ziggy', L.revealText(p.h));
     render(); save();
     coachEvent('place', i, d);
     checkDone();
@@ -307,20 +313,20 @@ function hint() {
   if (!G.tutorial) { G.hints++; save(); }
   if (wrong.length) {
     G.pending = { stage: 1, wrong, glow: wrong, hl: [] };
-    say('ziggi', L.mistakeText(wrong.length));
+    say('ziggy', L.mistakeText(wrong.length));
     tel.log('hint', { key: G.key, mistakes: wrong.length });
     render();
     return;
   }
   const h = nextPlacement(G.values);
-  if (!h) { say('ziggi', L.STUCK); tel.log('hint', { key: G.key, stuck: true }); return; }
+  if (!h) { say('ziggy', L.STUCK); tel.log('hint', { key: G.key, stuck: true }); return; }
   const target = h.place[0];
   let hl = [];
   let glow = [target];
   if (h.tech === 'hiddenSingle') { hl = UNITS[h.unit]; glow = []; } else if (h.via) { hl = h.via.cells; }
   G.pending = { stage: 1, h, hl, glow };
   G.sel = -1; G.digit = 0; // so the hint's squares stand out
-  say('ziggi', L.hintText(h));
+  say('ziggy', L.hintText(h));
   tel.log('hint', { key: G.key, tech: h.tech, level: G.level });
   render();
   coachEvent('hint');
@@ -397,18 +403,20 @@ function fitGrid() {
   for (const child of play.children) {
     if (child.classList.contains('grid-wrap') || child.classList.contains('hidden')) continue;
     const st = getComputedStyle(child);
-    used += child.offsetHeight + parseFloat(st.marginTop) + parseFloat(st.marginBottom);
+    // the tools' top margin is 'auto' (it pins them to the bottom): that's spare space, not used
+    used += child.offsetHeight + (child.classList.contains('tools') ? 0 : parseFloat(st.marginTop)) + parseFloat(st.marginBottom);
   }
   const size = Math.floor(Math.min(play.clientWidth - 20, 540, play.clientHeight - used - 2));
   $('grid').style.setProperty('--size', `${Math.max(220, size)}px`);
 }
 window.addEventListener('resize', fitGrid);
 
+const sayFaceSize = () => (innerHeight <= 700 ? 76 : 86);
 function say(who, text, { coach = false } = {}) {
   const box = $('say');
   box.classList.toggle('coach', coach);
   if (!who) { box.classList.remove('on'); return; }
-  face($('say-face'), who, 46);
+  face($('say-face'), who, sayFaceSize());
   $('say-text').textContent = text;
   box.classList.add('on');
 }
@@ -431,7 +439,7 @@ $('timer').onclick = () => { S.timer = !S.timer; store.saveSettings(S); tick(); 
 // --- finishing -----------------------------------------------------------------------------------
 function checkDone() {
   if (!G.values.every((v) => v)) return;
-  if (G.values.some((v, i) => v !== G.solution[i])) { say('ziggi', L.FULL_BUT_WRONG); return; }
+  if (G.values.some((v, i) => v !== G.solution[i])) { say('ziggy', L.FULL_BUT_WRONG); return; }
   G.done = true;
   G.sel = -1; G.digit = 0;
   render();
@@ -586,16 +594,16 @@ function wrap(ctx, text, x, y, w, lh) {
 }
 
 // --- the guide (first go) ---------------------------------------------------------------------------
-// A nearly finished grid: one square to find, notes to try, a hint from Ziggi, then the rest.
+// A nearly finished grid: one square to find, notes to try, a hint from Ziggy, then the rest.
 const T_SOLUTION = parse('534678912672195348198342567859761423426853791713924856961537284287419635345286179');
 const T_BLANKS = [2, 40, 39, 80, 24];
 const STEPS = [
-  { text: 'This is Ziggi, who\'ll show you round. Every row, column and 3×3 box holds 1 to 9, once each. Tap the glowing square.', glow: 2, done: (e, i) => e === 'select' && i === 2 },
+  { text: 'This is Ziggy, who\'ll show you round. Every row, column and 3×3 box holds 1 to 9, once each. Tap the glowing square.', glow: 2, done: (e, i) => e === 'select' && i === 2 },
   { text: 'Its row has every number but one. Which is missing? Tap it below.', glow: 2, done: (e, i, d) => e === 'place' && i === 2 && d === 4 },
   { text: 'Lovely! When you\'re not sure, pencil in notes. Tap Notes.', glowTool: 't-notes', done: (e, on) => e === 'notes' && on },
   { text: 'Tap the glowing square, then tap 5 and 8 to pencil them in.', glow: 40, done: () => (G.notes[40] & (bit(5) | bit(8))) === (bit(5) | bit(8)) },
   { text: 'Now tap Notes again to go back to numbers.', glowTool: 't-notes', done: (e, on) => e === 'notes' && !on },
-  { text: 'Stuck? Tap Hint and Ziggi shows you where to look.', glowTool: 't-hint', done: (e) => e === 'hint' },
+  { text: 'Stuck? Tap Hint and Ziggy shows you where to look.', glowTool: 't-hint', done: (e) => e === 'hint' },
   { text: 'Tap Hint again to fill it in, or pop it in yourself.', keep: true, glowTool: 't-hint', done: () => G.pending == null },
   { text: 'Now fill in the last squares. Watch the colours come in.', done: () => false },
 ];
@@ -610,8 +618,8 @@ function coachStep(n) {
   const t = G.tutorial;
   t.step = n;
   const s = STEPS[n];
-  // Ziggi shows you round
-  say('ziggi', s.keep ? `${$('say-text').textContent} ${s.text}` : s.text, { coach: !s.keep });
+  // Ziggy shows you round
+  say('ziggy', s.keep ? `${$('say-text').textContent} ${s.text}` : s.text, { coach: !s.keep });
   t.glow = s.glow ?? -1;
   t.glowTool = s.glowTool || null;
   render();
@@ -622,7 +630,7 @@ function coachEvent(e, a, b) {
   if (!t || t.step >= STEPS.length) return;
   const s = STEPS[t.step];
   if (t.step === 1 && e === 'place' && a === 2 && b !== 4) {
-    say('ziggi', 'Nearly! Look along the row for the number that isn\'t there yet.', { coach: true });
+    say('ziggy', 'Nearly! Look along the row for the number that isn\'t there yet.', { coach: true });
     setTimeout(() => { if (G?.tutorial && G.values[2] !== 4) { G.values[2] = 0; render(); } }, 700);
     return;
   }
@@ -691,7 +699,7 @@ $('m-restart').onclick = () => {
   G.values = G.givens.slice();
   G.notes = new Int16Array(81);
   G.sel = -1; G.digit = 0;
-  say('ziggi', 'A fresh start. (Undo brings it all back.)');
+  say('ziggy', 'A fresh start. (Undo brings it all back.)');
   afterChange();
 };
 $('m-settings').onclick = () => { $('menu').classList.add('hidden'); openSettings(); };
