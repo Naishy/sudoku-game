@@ -164,11 +164,14 @@ function buildBoard() {
 }
 buildBoard();
 const walker = new Walker($('ziggy-walk'), $('grid'));
+// a meow now and then, never two alike
+const meow = (kind) => sound.meow(kind, 0.92 + Math.random() * 0.16, kind === 'mrrp' ? 0.8 : 0.9);
+walker.onMeow = meow;
 
 // Ziggy about today's page, wandering from one side to the other, having a wash, dozing
 // off. Tap her and she purrs (asleep, she sits up first).
-function petZiggy(where, woke = false) {
-  setTimeout(() => { sound.purr(); haptics.purr(); }, woke ? 700 : 0);
+function petZiggy(where, woke = false, delay = 0) {
+  setTimeout(() => { sound.purr(); haptics.purr(); }, delay);
   tel.log('ziggy-pet', woke ? { where, woke } : { where });
 }
 let noteTimer = 0;
@@ -176,8 +179,16 @@ const homeCat = new Stroll($('home-ziggy'), {
   size: 70,
   seat: (w) => w * 0.13,
   wander: (w, x) => (x < w / 2 ? w * (0.84 + Math.random() * 0.04) : w * (0.11 + Math.random() * 0.04)),
-  onTap: ({ woke } = {}) => {
-    petZiggy('home', woke);
+  onMeow: (kind, why) => {
+    if (why === 'idle' && screen === 'home') { // she says something: the note says what
+      $('home-note').textContent = L.ziggyMeowed();
+      clearTimeout(noteTimer);
+      noteTimer = setTimeout(() => { if (screen === 'home') renderHome(); }, 5000);
+    }
+    return meow(kind);
+  },
+  onTap: ({ woke, delay = 0 } = {}) => {
+    petZiggy('home', woke, delay);
     $('home-note').textContent = woke ? L.ziggyWoken() : L.ziggyPetted();
     clearTimeout(noteTimer);
     noteTimer = setTimeout(() => { if (screen === 'home') renderHome(); }, 4500);
