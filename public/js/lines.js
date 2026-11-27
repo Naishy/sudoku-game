@@ -59,7 +59,8 @@ export function hintText(h) {
 /** Tap again: she fills it in. */
 export function revealText(h) {
   const d = h.place[1];
-  return pick([`It's a ${d}. You'd have got there!`, `There: a ${d}. Ziggy purrs.`, `A ${d}. Ziggy knew all along.`]);
+  const a = d === 8 ? 'an' : 'a';
+  return pick([`It's ${a} ${d}. You'd have got there!`, `There: ${a} ${d}. Ziggy purrs.`, `${a === 'an' ? 'An' : 'A'} ${d}. Ziggy knew all along.`]);
 }
 
 export function mistakeText(n) {
