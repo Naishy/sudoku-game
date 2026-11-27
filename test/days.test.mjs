@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { LEVELS, LEVEL_INFO, dayNumber, dateOfDay, dailyIndex, extraIndex, keyOf, fromKey, scoreFor, clock } from '../public/js/days.js';
+import { LEVELS, LEVEL_INFO, dayNumber, dateOfDay, dailyIndex, extraIndex, keyOf, fromKey, scoreFor, clock, longTime } from '../public/js/days.js';
 import { PALETTES, paletteFor, titleOf } from '../public/js/painting.js';
 import { encodeWork, decodeWork, mergeWorks, encodeNotes, decodeNotes } from '../public/js/store.js';
 import { merge, encode, decode } from '../public/js/carry.js';
@@ -37,6 +37,9 @@ test('scoring: harder and faster score more, hints a little less, slow still cou
   assert.ok(scoreFor('masterpiece', 40 * 60) > scoreFor('sketch', 3 * 60), 'a slow Masterpiece beats a quick Sketch');
   assert.equal(clock(75), '1:15');
   assert.equal(clock(3725), '1:02:05');
+  assert.equal(longTime(1), '1 second');
+  assert.equal(longTime(45), '45 seconds');
+  assert.equal(longTime(750), '12 min 30 s');
 });
 
 test('palettes: nine different colours each', () => {
