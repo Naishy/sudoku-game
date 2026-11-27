@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Grid Works">
-  <title>Grid Works</title>
+  <title>Grid Works by Heidi</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -24,13 +24,14 @@
     <section id="home" class="screen">
       <header class="poster">
         <div class="poster-text">
-          <div class="eyebrow">New paintings by Heidi</div>
+          <div id="today-date" class="eyebrow"></div>
           <h1 class="logo">Grid Works</h1>
-          <div id="today-date" class="today-date"></div>
+          <div class="by">by Heidi</div>
           <div class="palette-line"><span id="today-swatches" class="swatches"></span><span id="today-palette"></span></div>
         </div>
         <canvas id="portrait" class="portrait" width="96" height="96" aria-hidden="true"></canvas>
       </header>
+      <p class="opening"><span id="opening"></span> <span class="who">Heidi</span></p>
       <div id="levels" class="levels"></div>
       <div class="home-cat">
         <canvas id="home-ziggy" class="home-ziggy" aria-label="Ziggy the cat"></canvas>
