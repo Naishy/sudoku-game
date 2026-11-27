@@ -452,7 +452,7 @@ function maybeNap() {
   if (seat < 0) return;
   lastTouch = performance.now();
   walker.nap(seat);
-  say('ziggy', L.ziggyNapping(), { noFace: true }); napSaid = true; // she's on the grid: no second Ziggy
+  say('ziggy', L.ziggyNapping()); napSaid = true;
   tel.log('ziggy-nap', {});
 }
 
@@ -481,12 +481,13 @@ function fitGrid() {
 window.addEventListener('resize', fitGrid);
 
 const sayFaceSize = () => (innerHeight <= 700 ? 76 : 86);
-function say(who, text, { coach = false, noFace = false } = {}) {
+// Ziggy's words show on their own: she's on the grid (never a second Ziggy by the bubble)
+function say(who, text, { coach = false } = {}) {
   const box = $('say');
   box.classList.toggle('coach', coach);
   if (!who) { box.classList.remove('on'); return; }
-  face($('say-face'), who, sayFaceSize());
-  $('say-face').style.display = noFace ? 'none' : '';
+  if (who !== 'ziggy') face($('say-face'), who, sayFaceSize());
+  $('say-face').style.display = who === 'ziggy' ? 'none' : '';
   $('say-text').textContent = text;
   box.classList.add('on');
 }
