@@ -475,6 +475,7 @@ function syncZiggy() {
 function fitGrid() {
   if (screen !== 'play') return;
   const play = $('play');
+  $('say').style.height = ''; // measure with the bubble at its usual height
   const cs = getComputedStyle(play);
   let used = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
   for (const child of play.children) {
@@ -485,6 +486,11 @@ function fitGrid() {
   }
   const size = Math.floor(Math.min(play.clientWidth - 20, 540, play.clientHeight - used - 2));
   $('grid').style.setProperty('--size', `${Math.max(220, size)}px`);
+  // a tall phone has room to spare under the grid: Ziggy's words get some of it
+  const box = $('say');
+  const spare = play.clientHeight - used - 2 - size;
+  box.style.height = spare > 0 ? `${box.offsetHeight + Math.min(spare, 64)}px` : '';
+  fitSay();
 }
 window.addEventListener('resize', fitGrid);
 
@@ -498,6 +504,15 @@ function say(who, text, { coach = false } = {}) {
   $('say-face').style.display = who === 'ziggy' ? 'none' : '';
   $('say-text').textContent = text;
   box.classList.add('on');
+  fitSay();
+}
+
+// Words as big as the bubble allows: a long one steps down until it fits without scrolling
+function fitSay() {
+  const p = $('say-text');
+  p.style.fontSize = '';
+  let px = parseFloat(getComputedStyle(p).fontSize);
+  while (p.scrollHeight > p.clientHeight + 1 && px > 13) { px -= 0.5; p.style.fontSize = `${px}px`; }
 }
 
 // --- the clock ---------------------------------------------------------------------------------
