@@ -64,7 +64,6 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .level .status { font-size: 0.82rem; font-weight: 600; text-align: right; white-space: nowrap; color: var(--soft); }
 .level .status.done { color: var(--mine); }
 .level .status small { display: block; font-weight: 500; color: var(--soft); }
-.level .another { grid-column: 2 / 4; justify-self: start; margin-top: 2px; }
 /* Ziggy's patch of floor on today's page, with the day's note between the two places she
    likes to sit: she wanders from one to the other and purrs when tapped */
 .home-cat { position: relative; height: 84px; margin: 8px 0 6px; flex: none; }

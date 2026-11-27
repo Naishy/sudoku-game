@@ -2,7 +2,7 @@
 // eslint-disable-next-line import/order
 import { restored as carried, refreshInstallAddress, setHandoff } from './carry.js';
 import { parse, solve, conflicts, candidates, nextPlacement, UNITS, PEERS, unitsOf, rowOf, colOf, boxOf, bit } from './sudoku.js';
-import { LEVELS, LEVEL_INFO, CODE, dayNumber, dateOfDay, keyOf, fromKey, dailyIndex, extraIndex, scoreFor, clock, longTime } from './days.js';
+import { LEVELS, LEVEL_INFO, dayNumber, dateOfDay, keyOf, fromKey, dailyIndex, scoreFor, clock, longTime } from './days.js';
 import { PALETTES, paletteFor, paint, titleOf, STYLES, hexA } from './painting.js';
 import * as store from './store.js';
 import * as L from './lines.js';
@@ -100,16 +100,6 @@ function renderHome() {
     b.append(thumb, mid, status);
     b.onclick = () => { sound.tap(); haptics.tap(); if (w) openWork(w); else openPuzzle(key, { daily: true, day, palette }); };
     holder.append(b);
-    if (w) {
-      // done today: offer another at this level
-      const more = el('button', 'link another', `Another ${info.name.toLowerCase()} →`);
-      more.onclick = () => {
-        const keys = new Set(store.works().map((x) => x.key));
-        const pending = Object.keys(store.allProgress()).find((k) => k[0] === CODE[level] && !keys.has(k) && k !== key);
-        openPuzzle(pending || keyOf(level, extraIndex(level, day, keys)), { daily: false, day, palette });
-      };
-      holder.append(more);
-    }
   }
   $('home-note').textContent = L.homeNote(doneToday, LEVELS.length);
   $('works-count').textContent = works.length ? `(${works.length})` : '';
@@ -208,7 +198,7 @@ function openPuzzle(key, { daily, day, palette, tutorial = null }) {
   if (p?.n) G.notes = store.decodeNotes(p.n);
   const info = LEVEL_INFO[G.level];
   $('play-level').textContent = tutorial ? 'Your first grid' : info.name;
-  $('play-sub').textContent = tutorial ? 'A quick guide' : daily ? `Today's ${info.name.toLowerCase()} · ${PALETTES[G.palette].name}` : `Another ${info.name.toLowerCase()} · ${PALETTES[G.palette].name}`;
+  $('play-sub').textContent = tutorial ? 'A quick guide' : `Today's ${info.name.toLowerCase()} · ${PALETTES[G.palette].name}`;
   say(null);
   $('coach-skip').classList.toggle('hidden', !tutorial);
   $('timer').classList.toggle('hidden', !!tutorial);
