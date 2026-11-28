@@ -250,3 +250,34 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .pair-code { font-weight: 700; letter-spacing: 0.12em; }
 .label-inks { display: flex; gap: 12px; margin: 2px 0 1px; font-weight: 500; font-size: 0.8rem; color: var(--soft); }
 .label-inks i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+
+/* --- Techniques ---------------------------------------------------------------------------- */
+.learn-index { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 2px 10px; }
+.learn-index button { border: 1px solid var(--line); background: var(--paper); border-radius: 999px; padding: 5px 11px; font-size: 0.8rem; font-weight: 600; }
+.learn-list { display: flex; flex-direction: column; gap: 14px; padding-bottom: 24px; }
+.learn-level { font-family: var(--head); font-weight: 600; font-size: 1.35rem; margin: 14px 2px 0; }
+.learn-level small { display: block; font-family: var(--font); font-weight: 500; font-size: 0.8rem; color: var(--soft); }
+.tech { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 14px 14px 16px; scroll-margin-top: 10px; }
+.tech h3 { font-family: var(--head); font-weight: 600; font-size: 1.15rem; margin: 0 0 8px; }
+.tech p { margin: 0 0 8px; font-size: 0.92rem; line-height: 1.42; }
+.tech p b { font-weight: 600; }
+.tech .example { margin-top: 12px; font-size: 0.85rem; color: var(--soft); }
+.tech.flash { animation: flash 1.6s ease-out; }
+@keyframes flash { 0%, 30% { box-shadow: 0 0 0 3px var(--gold); } 100% { box-shadow: none; } }
+.mini { --m: min(300px, calc(100vw - 64px)); width: var(--m); height: var(--m); margin: 4px auto 0; display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, 1fr); border: 2px solid var(--ink); border-radius: 4px; overflow: hidden; background: #fff; }
+.mini > div { position: relative; display: flex; align-items: center; justify-content: center; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: calc(var(--m) / 9 * 0.5); font-weight: 600; color: #4a443d; }
+.mini > div:nth-child(9n) { border-right: 0; }
+.mini > div:nth-child(n+73) { border-bottom: 0; }
+.mini > div.br { border-right: 2px solid var(--ink); }
+.mini > div.bb { border-bottom: 2px solid var(--ink); }
+.mini > div.unit { background: #f4efe4; }
+.mini > div.proof { background: rgba(201, 162, 74, 0.34); }
+.mini > div.pivot { box-shadow: inset 0 0 0 2.5px #a8842f; }
+.mini > div.target { background: #e3efe9; box-shadow: inset 0 0 0 2.5px var(--emerald); color: var(--emerald); }
+.mini > div.same { color: var(--emerald); }
+.mini .n { position: absolute; inset: 1px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); font-size: calc(var(--m) / 9 * 0.27); font-weight: 600; color: #6f675d; line-height: 1; }
+.mini .n span { display: flex; align-items: center; justify-content: center; }
+.mini .n .kd { color: var(--emerald); font-weight: 700; }
+.mini .n .gone { color: var(--clash); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.say-learn { margin-left: 6px; padding: 0; font-size: 0.82em; color: var(--emerald); white-space: nowrap; }
+.how-link { font: inherit; font-weight: 700; color: var(--emerald); padding: 0; text-decoration: underline; }

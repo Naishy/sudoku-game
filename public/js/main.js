@@ -1,7 +1,8 @@
 // carry.js must come first: it restores progress carried into an installed copy
 // eslint-disable-next-line import/order
 import { restored as carried, refreshInstallAddress, setHandoff } from './carry.js';
-import { parse, solve, conflicts, candidates, nextPlacement, UNITS, PEERS, unitsOf, rowOf, colOf, boxOf, bit } from './sudoku.js';
+import { parse, solve, conflicts, candidates, nextPlacement, UNITS, PEERS, unitsOf, rowOf, colOf, boxOf, bit, digitsOf, TECHNIQUES } from './sudoku.js';
+import { EXAMPLES } from './examples.js';
 import { LEVELS, LEVEL_INFO, dayNumber, dateOfDay, keyOf, fromKey, dailyIndex, scoreFor, clock, longTime } from './days.js';
 import { PALETTES, paletteFor, paint, titleOf, STYLES, hexA } from './painting.js';
 import * as store from './store.js';
@@ -33,7 +34,7 @@ tel.log('open', { v: VERSION, w: innerWidth, h: innerHeight, works: store.works(
 window.addEventListener('pointerup', () => haptics.flush(), true);
 
 let updateReady = false; // a new version is waiting (see the end)
-const SCREENS = ['home', 'play', 'finish', 'works', 'work'];
+const SCREENS = ['home', 'play', 'finish', 'works', 'work', 'learn'];
 let screen = 'home';
 function show(name) {
   screen = name;
@@ -382,7 +383,7 @@ function hint() {
   const avoid = new Set([...region, target]);
   G.pending = { stage: 1, h, hl, glow, region, avoid, target, seat: seatNear(G.values, G.notes, region, avoid, target) };
   G.sel = -1; G.digit = 0; // so the hint's squares stand out
-  say('ziggy', L.hintText(h));
+  say('ziggy', L.hintText(h), { learn: h.via?.tech || h.tech });
   tel.log('hint', { key: G.key, tech: h.tech, level: G.level });
   render();
   coachEvent('hint');
@@ -511,7 +512,7 @@ window.addEventListener('resize', fitGrid);
 const sayFaceSize = () => (innerHeight <= 700 ? 76 : 86);
 // Ziggy's words show on their own: she's on the grid (never a second Ziggy by the bubble)
 let sayCount = 0; // goes up with every new line, so Ziggy only takes her own words with her
-function say(who, text, { coach = false } = {}) {
+function say(who, text, { coach = false, learn = null } = {}) {
   sayCount++;
   const box = $('say');
   box.classList.toggle('coach', coach);
@@ -519,6 +520,12 @@ function say(who, text, { coach = false } = {}) {
   if (who !== 'ziggy') face($('say-face'), who, sayFaceSize());
   $('say-face').style.display = who === 'ziggy' ? 'none' : '';
   $('say-text').textContent = text;
+  if (learn && TEACH_ORDER.includes(learn)) {
+    // a hint: how the method works, on the Techniques page
+    const b = el('button', 'link say-learn', 'How does this work?');
+    b.onclick = () => openLearn(learn, 'play');
+    $('say-text').append(b);
+  }
   box.classList.add('on');
   fitSay();
 }
@@ -895,7 +902,7 @@ function pendingFrom(p) {
   if (h.tech === 'hiddenSingle') { hl = UNITS[h.unit]; glow = []; } else if (h.via) hl = h.via.cells;
   const region = [...hl, ...glow, target];
   const avoid = new Set([...region, target]);
-  say('ziggy', L.hintText(h));
+  say('ziggy', L.hintText(h), { learn: h.via?.tech || h.tech });
   return { id: p.id, stage: 1, h, hl, glow, region, avoid, target, seat: seatNear(G.values, G.notes, region, avoid, target) };
 }
 
@@ -975,6 +982,128 @@ function showPairFinish(work) {
   animatePainting($('finish-canvas'), work.key, f.level, paletteOfWork(work), frameSize(), 1700, work);
   $('fin-save').onclick = () => sharePicture(work);
 }
+
+// --- Techniques: how Ziggy thinks ---------------------------------------------------------
+// Every method the hints use, grouped by the level that needs it, each with a worked
+// example from a real puzzle (examples.js, made by tools/make-examples.mjs).
+const TEACH_ORDER = Object.keys(L.TEACH);
+let learnFrom = 'home';
+let learnBuilt = false;
+
+function buildLearn() {
+  const list = $('learn-list');
+  const index = $('learn-index');
+  list.innerHTML = ''; index.innerHTML = '';
+  LEVELS.forEach((level, k) => {
+    const info = LEVEL_INFO[level];
+    const techs = TEACH_ORDER.filter((t) => TECHNIQUES[t].level === k + 1);
+    const h = el('h2', 'learn-level', info.name);
+    h.id = `learn-${level}`;
+    h.append(el('small', null, k === 0 ? 'All you need for a Sketch' : `New for ${info.name} (and everything above)`));
+    list.append(h);
+    const chip = el('button', null, info.name);
+    chip.onclick = () => h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    index.append(chip);
+    for (const t of techs) list.append(techCard(t));
+  });
+  learnBuilt = true;
+}
+
+function techCard(t) {
+  const T = L.TEACH[t];
+  const card = el('article', 'tech');
+  card.id = `tech-${t}`;
+  card.append(el('h3', null, T.name));
+  const look = el('p'); look.append(el('b', null, 'Look for: '), document.createTextNode(T.look));
+  const why = el('p'); why.append(el('b', null, 'Why: '), document.createTextNode(T.why));
+  card.append(look, why);
+  const ex = EXAMPLES[t];
+  if (ex) {
+    const { grid, cap } = miniGrid(t, ex);
+    card.append(grid, el('p', 'example', cap));
+  }
+  return card;
+}
+
+/** A worked example as a small grid: the squares that prove it in gold, the notes it rules out crossed through. */
+function miniGrid(t, ex) {
+  const g = parse(ex.grid);
+  const cand = store.decodeNotes(ex.notes);
+  const s = ex.step;
+  const proof = new Set(s.cells || []);
+  const elim = new Map((s.elim || []).map(([i, m]) => [i, m]));
+  const place = s.place ? s.place[0] : -1;
+  // the row, column or box it's about, shaded
+  const unit = new Set(s.unit != null ? UNITS[s.unit] : []);
+  // notes that matter: the proving digit(s)
+  let key = 0;
+  if (s.digit) key = bit(s.digit);
+  else if (s.cells && !t.startsWith('hidden')) for (const i of s.cells) key |= cand[i];
+  else if (t.startsWith('hidden')) { for (const i of s.cells) key |= cand[i] & ~(elim.get(i) || 0); }
+  // notes in the squares that prove it and the ones it clears, and across the row, column or
+  // box it's about (so you can check), but not for the singles: those are found by looking
+  const showNotes = new Set([...proof, ...elim.keys()]);
+  if (!t.endsWith('Single')) for (const i of unit) showNotes.add(i);
+  let lines = null;
+  if (t === 'xWing' || t === 'swordfish') {
+    // the lines the number is confined to: all their notes, to show it's nowhere else
+    const cols = new Set(s.cells.map(colOf));
+    lines = s.elim.every(([i]) => cols.has(colOf(i))) ? 'rows' : 'columns';
+    const of = lines === 'rows' ? rowOf : colOf;
+    const base = new Set(s.cells.map(of));
+    for (let i = 0; i < 81; i++) if (base.has(of(i))) { showNotes.add(i); unit.add(i); }
+  }
+  if (t === 'nakedSingle') showNotes.delete(place);
+  const div = el('div', 'mini');
+  div.setAttribute('aria-hidden', 'true');
+  for (let i = 0; i < 81; i++) {
+    const c = el('div');
+    if (colOf(i) === 2 || colOf(i) === 5) c.classList.add('br');
+    if (rowOf(i) === 2 || rowOf(i) === 5) c.classList.add('bb');
+    if (unit.has(i)) c.classList.add('unit');
+    if (proof.has(i) && i !== place) c.classList.add('proof');
+    if ((t === 'xyWing' || t === 'xyzWing') && i === s.cells[0]) c.classList.add('pivot');
+    if (g[i]) {
+      c.textContent = String(g[i]);
+      if (t === 'hiddenSingle' && g[i] === s.digit) c.classList.add('same');
+    } else if (i === place) {
+      c.classList.add('target');
+      c.textContent = String(s.place[1]);
+    } else if (showNotes.has(i)) {
+      const n = el('div', 'n');
+      for (let d = 1; d <= 9; d++) {
+        const on = cand[i] & bit(d);
+        const sp = el('span', null, on ? String(d) : '');
+        if (on && elim.has(i) && elim.get(i) & bit(d)) sp.className = 'gone';
+        else if (on && key & bit(d)) sp.className = 'kd';
+        n.append(sp);
+      }
+      c.append(n);
+    }
+    div.append(c);
+  }
+  // what the caption needs to know
+  const extra = { ...s, masks: cand, keep: t.startsWith('hidden') ? key : 0 };
+  if (lines) extra.lines = lines;
+  return { grid: div, cap: L.exampleText(t, extra, digitsOf) };
+}
+
+function openLearn(tech, from) {
+  if (!learnBuilt) buildLearn();
+  learnFrom = from;
+  sound.tap();
+  show('learn');
+  const scroller = $('learn');
+  if (tech) {
+    const card = $(`tech-${tech}`);
+    card?.scrollIntoView({ block: 'start' });
+    card?.classList.remove('flash'); void card?.offsetWidth; card?.classList.add('flash');
+  } else scroller.scrollTop = 0;
+  tel.log('learn', { from, tech });
+}
+$('learn-back').onclick = () => {
+  if (learnFrom === 'play' && G) { show('play'); render(); fitGrid(); } else show('home');
+};
 
 // --- the guide (first go) ---------------------------------------------------------------------------
 // A nearly finished grid: one square to find, notes to try, a hint from Ziggy, then the rest.
@@ -1095,6 +1224,8 @@ $('btn-settings').onclick = openSettings;
 $('btn-how').onclick = () => $('how').classList.remove('hidden');
 $('how-close').onclick = () => $('how').classList.add('hidden');
 $('how-guide').onclick = () => { $('how').classList.add('hidden'); startTutorial(); };
+$('how-learn').onclick = () => { $('how').classList.add('hidden'); openLearn(null, 'home'); };
+$('how-learn-inline').onclick = $('how-learn').onclick;
 $('welcome-guide').onclick = () => { $('welcome').classList.add('hidden'); sound.unlock(); startTutorial(); };
 $('welcome-skip').onclick = () => { $('welcome').classList.add('hidden'); store.markInducted(); refreshInstallAddress(); tel.log('guide', { step: 'knows' }); };
 
