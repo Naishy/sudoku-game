@@ -47,7 +47,7 @@ const modalOpen = () => ['welcome', 'how', 'settings', 'menu', 'install', 'gift'
 
 // --- the cast, drawn small ------------------------------------------------------------------
 function face(canvas, who, px) {
-  // Ziggy sits whole beside the bubble (no circle round her); Heidi's portrait is round
+  // Ziggy sits whole beside the bubble (no circle round him); Heidi's portrait is round
   const w = who === 'ziggy' ? Math.round(px * 0.84) : px;
   canvas.width = Math.round(w * DPR);
   canvas.height = Math.round(px * DPR);
@@ -167,7 +167,7 @@ const meow = (kind) => sound.meow(kind, 0.92 + Math.random() * 0.16, kind === 'm
 walker.onMeow = meow;
 
 // Ziggy about today's page, wandering from one side to the other, having a wash, dozing
-// off. Tap her and she purrs (asleep, she sits up first).
+// off. Tap him and he purrs (asleep, he sits up first).
 function petZiggy(where, woke = false, delay = 0) {
   setTimeout(() => { sound.purr(); haptics.purr(); }, delay);
   tel.log('ziggy-pet', woke ? { where, woke } : { where });
@@ -178,7 +178,7 @@ const homeCat = new Stroll($('home-ziggy'), {
   seat: (w) => w * 0.13,
   wander: (w, x) => (x < w / 2 ? w * (0.84 + Math.random() * 0.04) : w * (0.11 + Math.random() * 0.04)),
   onMeow: (kind, why) => {
-    if (why === 'idle' && screen === 'home') { // she says something: the note says what
+    if (why === 'idle' && screen === 'home') { // he says something: the note says what
       $('home-note').textContent = L.ziggyMeowed();
       clearTimeout(noteTimer);
       noteTimer = setTimeout(() => { if (screen === 'home') renderHome(); }, 5000);
@@ -233,7 +233,7 @@ function select(i) {
   if (!G || G.done) return;
   G.sel = G.sel === i && !G.values[i] ? -1 : i;
   G.digit = G.sel >= 0 ? G.values[G.sel] : 0;
-  // tapped the square Ziggy's sitting in during a hint: she shifts over so you can see it
+  // tapped the square Ziggy's sitting in during a hint: he shifts over so you can see it
   const p = G.pending;
   if (p && G.sel >= 0 && p.seat === G.sel) {
     p.avoid.add(G.sel);
@@ -458,7 +458,7 @@ function render() {
   syncZiggy();
 }
 
-// Leave the grid alone this long and Ziggy comes and naps on it; anything you do wakes her
+// Leave the grid alone this long and Ziggy comes and naps on it; anything you do wakes him
 const NAP_AFTER_MS = 90 * 1000;
 let lastTouch = performance.now();
 let napSaid = false;
@@ -485,7 +485,7 @@ function syncZiggy() {
   if (!G || G.done || screen !== 'play') { walker.leave(); return; }
   const seat = G.pending?.seat ?? G.tutorial?.seat ?? -1;
   if (seat >= 0) { walker.sitAt(seat); return; }
-  // when she walks off, her hint goes with her (unless something newer's been said since)
+  // when he walks off, his hint goes with him (unless something newer's been said since)
   const said = sayCount;
   if (!G.tutorial && (walker.state === 'sitting' || walker.state === 'walking-in')) walker.onLeave = () => { if (said === sayCount && !G?.tutorial && !$('say').classList.contains('coach')) say(null); };
   walker.leave();
@@ -515,8 +515,8 @@ function fitGrid() {
 window.addEventListener('resize', fitGrid);
 
 const sayFaceSize = () => (innerHeight <= 700 ? 76 : 86);
-// Ziggy's words show on their own: she's on the grid (never a second Ziggy by the bubble)
-let sayCount = 0; // goes up with every new line, so Ziggy only takes her own words with her
+// Ziggy's words show on their own: he's on the grid (never a second Ziggy by the bubble)
+let sayCount = 0; // goes up with every new line, so Ziggy only takes his own words with him
 function say(who, text, { coach = false, learn = null, next = null } = {}) {
   sayCount++;
   const box = $('say');
@@ -1144,7 +1144,7 @@ function lessonSteps(t, ex, g, cand) {
   const what = { hiddenSingle: 'a number with only one place to go', nakedSingle: 'a square where only one number fits' }[t] || L.PHRASE[t];
   const steps = [];
   const next = (o) => steps.push({ next: 'Next', done: (e) => e === 'next', ...o });
-  next({ text: `Ziggy's found ${what} in this grid. She'll show you how it works.` });
+  next({ text: `Ziggy's found ${what} in this grid. He'll show you how it works.` });
   if (s.place) {
     const [target, d] = s.place;
     if (t === 'hiddenSingle') {

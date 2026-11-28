@@ -14,7 +14,7 @@ test('Ziggy sits in an empty square beside the hint, never on it', () => {
   assert.equal(seatNear(values, notes, [40], new Set([40]), 40), 39);
 });
 
-test('with nothing empty nearby she sits on a filled square outside the target\'s row, column and box', () => {
+test('with nothing empty nearby he sits on a filled square outside the target\'s row, column and box', () => {
   const values = new Array(81).fill(5);
   values[2] = 0; values[80] = 0;
   const seat = seatNear(values, new Int16Array(81), [2], new Set([2]), 2);
@@ -23,7 +23,7 @@ test('with nothing empty nearby she sits on a filled square outside the target\'
   assert.ok(row(seat) !== 0 && col(seat) !== 2 && box(seat) !== 0, `seat ${seat}`);
 });
 
-test('napping, she picks a given number in a finished box, clear of the selected square', () => {
+test('napping, he picks a given number in a finished box, clear of the selected square', () => {
   const givens = new Array(81).fill(0), values = new Array(81).fill(0);
   // box 4 (the centre) is finished; a few givens elsewhere
   for (const i of [30, 31, 32, 39, 40, 41, 48, 49, 50]) values[i] = 1;
