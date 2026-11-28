@@ -298,18 +298,6 @@ button.pair-code { border: 0; background: none; padding: 0; font: inherit; font-
 /* Together, as a round button beside Settings; a dot when a grid with someone is waiting */
 .together-icon { position: relative; display: inline-flex; align-items: center; justify-content: center; }
 .together-icon.waiting::after { content: ''; position: absolute; top: 3px; right: 3px; width: 9px; height: 9px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px var(--bg); }
-/* shorter phones: a tighter front page, so it never scrolls */
-@media (max-height: 640px) {
-  .poster { padding-bottom: 9px; margin-bottom: 9px; }
-  .logo { font-size: 2rem; }
-  .portrait { width: 68px; height: 68px; }
-  .level { padding-top: 6px; padding-bottom: 6px; grid-template-columns: 42px 1fr auto; }
-  .level .thumb { width: 42px; height: 42px; }
-  .level .name { font-size: 1.12rem; }
-  .levels { gap: 6px; }
-  .home-cat { height: 64px; margin: 4px 0 0; }
-  .home-buttons { margin-bottom: 6px; }
-}
 @media (max-height: 580px) {
   .palette-line { display: none; }
   .level .blurb { display: none; }
@@ -329,5 +317,19 @@ button.pair-code { border: 0; background: none; padding: 0; font: inherit; font-
   .level .name { font-size: 1.08rem; gap: 6px; }
   .level .dots { font-size: 0.55rem; letter-spacing: 1px; }
 }
-/* tall phones: Ziggy's patch takes some of the spare room, so the page isn't all at the top */
-@media (min-height: 700px) { .home-cat { height: auto; flex: 1 0 78px; max-height: 150px; } }
+
+/* --- today's page scales with the screen --------------------------------------------------
+   Sizes follow the screen's height (dvh), between a floor for small phones and a ceiling for
+   big ones: the header, the level cards (which stretch to share the room) and Ziggy's patch.
+   main.js sets --thumb, the size the cards' paintings are drawn at. On the smallest phones a
+   few extras go (see max-height: 580px above). */
+#home .poster { padding: clamp(2px, 0.8dvh, 10px) 2px clamp(8px, 1.6dvh, 18px); margin-bottom: clamp(8px, 1.6dvh, 16px); }
+#home .logo { font-size: clamp(1.85rem, 5.2dvh, 2.9rem); }
+#home .portrait { width: clamp(62px, 12.5dvh, 116px); height: clamp(62px, 12.5dvh, 116px); }
+#home .levels { flex: 1 1 auto; gap: clamp(6px, 1.2dvh, 12px); max-height: 520px; }
+#home .level { flex: 1 1 0; min-height: 0; max-height: 116px; padding: clamp(5px, 1dvh, 12px) 14px clamp(5px, 1dvh, 12px) 9px; grid-template-columns: var(--thumb, 50px) 1fr auto; }
+#home .level .thumb { width: var(--thumb, 50px); height: var(--thumb, 50px); }
+#home .level .name { font-size: clamp(1.08rem, 2.7dvh, 1.45rem); }
+#home .level .blurb { font-size: clamp(0.78rem, 1.65dvh, 0.98rem); }
+#home .home-cat { height: auto; flex: 0 1 clamp(54px, 11dvh, 120px); min-height: 52px; margin: clamp(2px, 0.8dvh, 10px) 0 0; }
+#home .home-note { font-size: clamp(0.85rem, 1.8dvh, 1.05rem); }

@@ -79,9 +79,14 @@ function renderHome() {
   sw.innerHTML = '';
   for (const c of PALETTES[palette].colours) { const i = el('i'); i.style.background = c; sw.append(i); }
   $('today-palette').textContent = `Today's colours: ${PALETTES[palette].name}`;
-  face($('portrait'), 'heidi', 96);
+  // Heidi's portrait grows with the screen too (smaller on a narrow one, beside the title)
+  const portraitPx = Math.round(Math.max(62, Math.min(innerWidth < 360 ? 66 : 116, innerHeight * 0.125)));
+  face($('portrait'), 'heidi', portraitPx);
   const works = store.works();
   const done = new Map(works.map((w) => [w.key, w]));
+  // the cards' paintings grow with the screen (the CSS sizes the cards from --thumb)
+  const thumbPx = Math.round(Math.max(40, Math.min(76, innerHeight * 0.078)));
+  document.documentElement.style.setProperty('--thumb', `${thumbPx}px`);
   const holder = $('levels');
   holder.innerHTML = '';
   let doneToday = 0;
@@ -94,7 +99,7 @@ function renderHome() {
     let thumb;
     if (w) {
       doneToday++;
-      thumb = paintingCanvas(key, w.palette, innerHeight <= 640 ? 42 : 50); // the size .level .thumb is in the CSS
+      thumb = paintingCanvas(key, w.palette, thumbPx);
       thumb.className = 'thumb';
     } else thumb = el('span', 'thumb blank');
     const mid = el('div');
@@ -110,7 +115,7 @@ function renderHome() {
   $('home-note').textContent = L.homeNote(doneToday, LEVELS.length);
   const pr = store.pairing();
   // Ziggy fits his patch of floor (smaller on a short phone)
-  homeCat.size = Math.max(44, Math.min(70, $('home-ziggy').offsetHeight - 8));
+  homeCat.size = Math.max(44, Math.min(96, $('home-ziggy').offsetHeight - 8));
   // a Together grid not finished yet: a dot on the button (the card says who it's with)
   $('btn-together').classList.toggle('waiting', !!pr);
   $('btn-together').title = pr ? `Together: carry on with ${pr.partner || 'your partner'}` : 'Together: two phones, one grid';
@@ -522,6 +527,7 @@ function fitGrid() {
   fitSay();
 }
 window.addEventListener('resize', fitGrid);
+window.addEventListener('resize', () => { if (screen === 'home') renderHome(); });
 
 const sayFaceSize = () => (innerHeight <= 700 ? 76 : 86);
 // Ziggy's words show on their own: he's on the grid (never a second Ziggy by the bubble)
