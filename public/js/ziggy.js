@@ -4,7 +4,7 @@
 //
 // Drawn from Tim's photo: a brown tabby with dark stripes, a white chin and chest, and
 // white paws. (To add Ziggy to the family cast later, move this into family-games
-// cast/people.js so every game draws her alike.)
+// cast/people.js so every game draws him alike.)
 const INK = '#2b1d14';
 export const COAT = {
   fur: '#8c7b66', // warm grey-brown tabby
@@ -27,12 +27,12 @@ function stripe(ctx, pts, w = 4) {
   ctx.strokeStyle = COAT.dark; ctx.lineWidth = w; ctx.stroke();
 }
 
-/** The size of Ziggy sitting, in her own units: for fitting her into a box. */
+/** The size of Ziggy sitting, in his own units: for fitting him into a box. */
 export const ZIGGY_BOX = { left: -52, right: 74, top: -48, bottom: 104 };
 
 /**
- * Where her paw goes while she washes: `kind` is 'paw' (licking it) or 'face' (wiping it
- * over her cheek and ear); k runs 0 to 1 over one wash. Lift eases the paw up and back down.
+ * Where his paw goes while he washes: `kind` is 'paw' (licking it) or 'face' (wiping it
+ * over his cheek and ear); k runs 0 to 1 over one wash. Lift eases the paw up and back down.
  */
 export function groomPose(kind, k, t = 0) {
   const lift = Math.min(1, k / 0.14, (1 - k) / 0.14);
@@ -90,7 +90,7 @@ export function drawZiggy(ctx, x, y, s = 1, { t = 0, blink = false, body = true,
   if (g) { ctx.save(); ctx.translate(0, 20); ctx.rotate(g.tilt); ctx.translate(0, -20); }
   drawHead(ctx, { blink: blink || !!(g && g.lift > 0.5), tongue: g?.tongue, meow: g ? 0 : meow });
   if (g) ctx.restore();
-  // the washing paw, up in front of her face
+  // the washing paw, up in front of his face
   if (g && g.lift > 0.05) {
     const px = 13 + (g.px - 13) * g.lift, py = 97 + (g.py - 97) * g.lift;
     const leg = () => { ctx.beginPath(); ctx.moveTo(12, 44); ctx.quadraticCurveTo(26 + 6 * g.lift, (44 + py) / 2 + 8, px, py + 6); };
@@ -101,7 +101,7 @@ export function drawZiggy(ctx, x, y, s = 1, { t = 0, blink = false, body = true,
   ctx.restore();
 }
 
-/** Her head, facing you, centred on (0, 0). Used sitting, washing and asleep. */
+/** His head, facing you, centred on (0, 0). Used sitting, washing and asleep. */
 function drawHead(ctx, { blink = false, tongue = 0, sleep = false, meow = 0 } = {}) {
   const C = COAT;
   // ears
@@ -166,9 +166,9 @@ function drawHead(ctx, { blink = false, tongue = 0, sleep = false, meow = 0 } = 
 export const ZIGGY_SLEEP_BOX = { left: -70, right: 70, top: 22, bottom: 104 };
 
 /**
- * Ziggy curled up asleep, facing you: a round loaf with her head down on her paws and her
+ * Ziggy curled up asleep, facing you: a round loaf with his head down on his paws and his
  * tail wrapped round the front. Same scale and ground as drawZiggy sitting at (x, y).
- * `t` is time in seconds: she breathes slowly, and the tip of her tail twitches now and then.
+ * `t` is time in seconds: he breathes slowly, and the tip of his tail twitches now and then.
  */
 export function drawZiggySleeping(ctx, x, y, s = 1, { t = 0 } = {}) {
   const C = COAT;
@@ -198,9 +198,9 @@ export function drawZiggySleeping(ctx, x, y, s = 1, { t = 0 } = {}) {
   tail(); ctx.strokeStyle = C.fur; ctx.lineWidth = 12; ctx.stroke();
   ctx.save(); ctx.setLineDash([7, 9]); tail(); ctx.strokeStyle = C.dark; ctx.lineWidth = 12; ctx.stroke(); ctx.restore();
   ell(ctx, -56 + tw, 92, 6.5, 6); fs(ctx, C.dark, INK, 2.5);
-  // a white paw tucked in front, for her chin to rest on
+  // a white paw tucked in front, for his chin to rest on
   ell(ctx, 4, 90, 13, 7); fs(ctx, C.white, INK, 2.5);
-  // her head, down on her paw and tilted, eyes shut
+  // his head, down on his paw and tilted, eyes shut
   ctx.save();
   ctx.translate(-22, 66 + breathe * 30);
   ctx.rotate(-0.28);
@@ -210,7 +210,7 @@ export function drawZiggySleeping(ctx, x, y, s = 1, { t = 0 } = {}) {
   ctx.restore();
 }
 
-/** Little z's drifting up from her while she sleeps: (x, top) is above her head. */
+/** Little z's drifting up from him while he sleeps: (x, top) is above his head. */
 export function drawZzz(ctx, x, top, size, t) {
   ctx.save();
   ctx.fillStyle = '#7a7166';
@@ -230,8 +230,8 @@ export const ZIGGY_WALK_BOX = { left: -96, right: 98, top: -144, bottom: 2 };
 
 /**
  * Ziggy walking, side on, facing right: the same cat as drawZiggy at the same scale. (x, y)
- * is the ground under her middle. `phase` turns once per stride (radians); `t` swishes the
- * tail; `look` turns her head up a little (0 to 1), as when she's admiring a picture.
+ * is the ground under his middle. `phase` turns once per stride (radians); `t` swishes the
+ * tail; `look` turns his head up a little (0 to 1), as when he's admiring a picture.
  */
 export function drawZiggyWalking(ctx, x, y, s = 1, { phase = 0, t = 0, blink = false, look = 0 } = {}) {
   const C = COAT;

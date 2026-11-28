@@ -56,11 +56,11 @@ export function hintText(h) {
   return `Ziggy's found ${name}: ${why}. Then look at the glowing square.`;
 }
 
-/** Tap again: she fills it in. */
+/** Tap again: he fills it in. */
 export function revealText(h) {
   const d = h.place[1];
   const a = d === 8 ? 'an' : 'a';
-  return pick([`It's ${a} ${d}. Ziggy purrs: you'd have got there!`, `There: ${a} ${d}. Ziggy purrs.`, `${a === 'an' ? 'An' : 'A'} ${d}. Ziggy purrs: she knew all along.`]);
+  return pick([`It's ${a} ${d}. Ziggy purrs: you'd have got there!`, `There: ${a} ${d}. Ziggy purrs.`, `${a === 'an' ? 'An' : 'A'} ${d}. Ziggy purrs: he knew all along.`]);
 }
 
 export function mistakeText(n) {
@@ -102,36 +102,36 @@ export function homeNote(doneToday, total) {
   return `${doneToday} of ${total} hung today.`;
 }
 
-/** What Ziggy does when you tap her on today's page. */
+/** What Ziggy does when you tap him on today's page. */
 const PETTED = [
   'Ziggy purrs.',
   'Ziggy slow-blinks at you. In cat, that\'s "I love you".',
   'Ziggy headbutts your hand, purring.',
-  'Ziggy purrs, then pretends she didn\'t.',
+  'Ziggy purrs, then pretends he didn\'t.',
   'Ziggy stretches, one paw at a time.',
   'Ziggy wonders if it\'s dinner time yet.',
-  'Ziggy purrs. She likes a good grid.',
+  'Ziggy purrs. He likes a good grid.',
 ];
-/** Tapping her on today's page when she's asleep. */
+/** Tapping him on today's page when he's asleep. */
 const WOKEN = [
   'Ziggy opens one eye, stretches, and purrs.',
   'Ziggy wakes up, yawns, and purrs anyway.',
   'Ziggy stretches out every claw, then purrs.',
-  'Ziggy was only resting her eyes. She purrs.',
+  'Ziggy was only resting his eyes. He purrs.',
 ];
-/** When she comes and naps on a grid that's been left alone. */
+/** When he comes and naps on a grid that's been left alone. */
 const NAPPING = [
-  'Ziggy\'s curled up on your grid for a nap. Tap anywhere and she\'ll move.',
-  'Ziggy thinks a quiet grid is a good place for a sleep. Tap anywhere to wake her.',
-  'Ziggy has settled on the grid, as cats do. She\'ll move when you carry on.',
+  'Ziggy\'s curled up on your grid for a nap. Tap anywhere and he\'ll move.',
+  'Ziggy thinks a quiet grid is a good place for a sleep. Tap anywhere to wake him.',
+  'Ziggy has settled on the grid, as cats do. He\'ll move when you carry on.',
 ];
-/** When she meows at nothing in particular on today's page. */
+/** When he meows at nothing in particular on today's page. */
 const MEOWED = [
   'Ziggy meows. Probably about dinner.',
   'Ziggy meows at the door. Then doesn\'t go out.',
   'Ziggy meows, just to check you\'re still there.',
-  'Ziggy meows. She has opinions about the colours today.',
-  'Ziggy meows at something only she can see.',
+  'Ziggy meows. He has opinions about the colours today.',
+  'Ziggy meows at something only he can see.',
 ];
 export const ziggyMeowed = () => MEOWED[Math.floor(Math.random() * MEOWED.length)];
 export const ziggyWoken = () => WOKEN[Math.floor(Math.random() * WOKEN.length)];
