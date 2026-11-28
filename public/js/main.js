@@ -70,6 +70,8 @@ function face(canvas, who, px) {
 const today = () => { const day = dayNumber(); return { day, date: dateOfDay(day), palette: paletteFor(day, dateOfDay(day)) }; };
 const DATE = (d) => d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 
+// one line each on the front page (so it all fits on one screen); the Together card has the long ones
+const SHORT_BLURB = { sketch: 'Gentle: found by looking', study: 'Pairs and pointing', composition: 'Triples and X-Wings', masterpiece: 'Fiendish: XY-Wings' };
 function renderHome() {
   const { day, date, palette } = today();
   $('today-date').textContent = DATE(date);
@@ -92,13 +94,13 @@ function renderHome() {
     let thumb;
     if (w) {
       doneToday++;
-      thumb = paintingCanvas(key, w.palette, 64);
+      thumb = paintingCanvas(key, w.palette, innerHeight <= 640 ? 42 : 50); // the size .level .thumb is in the CSS
       thumb.className = 'thumb';
     } else thumb = el('span', 'thumb blank');
     const mid = el('div');
     const name = el('div', 'name', info.name);
     name.append(el('span', 'dots', '●'.repeat(info.dots) + '○'.repeat(4 - info.dots)));
-    mid.append(name, el('div', 'blurb', info.blurb));
+    mid.append(name, el('div', 'blurb', SHORT_BLURB[level] || info.blurb));
     const status = el('div', `status${w ? ' done' : ''}`);
     if (w) { status.textContent = 'Hung'; status.append(el('small', null, clock(w.secs))); } else if (p) { status.textContent = 'Carry on'; status.append(el('small', null, clock(p.s))); } else status.textContent = 'New';
     b.append(thumb, mid, status);
@@ -107,7 +109,11 @@ function renderHome() {
   }
   $('home-note').textContent = L.homeNote(doneToday, LEVELS.length);
   const pr = store.pairing();
-  $('together-sub').textContent = pr ? `Carry on with ${pr.partner || 'your partner'} (code ${pr.code})` : 'Two phones, one grid';
+  // Ziggy fits his patch of floor (smaller on a short phone)
+  homeCat.size = Math.max(44, Math.min(70, $('home-ziggy').offsetHeight - 8));
+  // a Together grid not finished yet: a dot on the button (the card says who it's with)
+  $('btn-together').classList.toggle('waiting', !!pr);
+  $('btn-together').title = pr ? `Together: carry on with ${pr.partner || 'your partner'}` : 'Together: two phones, one grid';
   const n = works.length + store.pairWorks().length;
   $('works-count').textContent = n ? `(${n})` : '';
 }
