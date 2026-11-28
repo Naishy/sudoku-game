@@ -106,6 +106,9 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .cell.wrong { color: var(--clash); }
 .cell.hl { background-color: #f7dc8c !important; box-shadow: inset 0 0 0 2px rgba(201, 162, 74, 0.7); }
 .cell.hl-cell { box-shadow: inset 0 0 0 3px var(--gold); }
+/* a lesson (Show me): the area to look at softly shaded, the squares that matter in gold */
+.cell.zone { background-color: #efe6d2 !important; }
+.cell.spot { background-color: #f7dc8c !important; }
 .cell.glow { animation: glow 1.4s ease-in-out infinite; }
 .cell.shimmer { animation: shimmer 0.7s ease-out; }
 .notes { position: absolute; inset: 2px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); }
@@ -285,3 +288,6 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .tech .show-me { display: block; margin: 12px auto 0; }
 #learn.no-lessons .show-me { display: none; }
 .coach-next { display: inline-block; float: right; margin: 4px 0 0 10px; border: 0; border-radius: 999px; padding: 0.45em 1.1em; background: var(--paper); color: var(--ink); font-weight: 700; font-size: 0.85em; }
+/* Ziggy's coaching (the guide, Show me) says more than a hint: a taller bubble, and the grid makes room */
+.say.coach { height: 118px; }
+@media (max-height: 700px) { .say.coach { height: 112px; } }
