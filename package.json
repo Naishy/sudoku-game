@@ -12,7 +12,8 @@
     "icons": "node tools/make-icons.mjs",
     "deploy": "wrangler deploy",
     "card": "node tools/make-card.mjs",
-    "balance": "node tools/balance.mjs"
+    "balance": "node tools/balance.mjs",
+    "examples": "node tools/make-examples.mjs"
   },
   "devDependencies": {
     "qrcode": "^1.5.4",

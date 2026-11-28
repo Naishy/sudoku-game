@@ -143,3 +143,98 @@ export function ziggyPetted() {
   lastPet = i;
   return PETTED[i];
 }
+
+// --- the Techniques page ----------------------------------------------------------------
+// Each method Ziggy's hints use: what to look for and why it works, in plain words, with
+// a worked example from a real puzzle (examples.js). Grouped by the level that needs it.
+export const TEACH = {
+  hiddenSingle: {
+    name: 'Only one place',
+    look: 'Pick a number and a row, column or box that doesn\'t have it yet. Check each empty square there: is that number already in its row, column or box?',
+    why: 'If the number can go in only one square, it goes there. Numbers that are already on the grid a lot are the quickest to try.',
+  },
+  nakedSingle: {
+    name: 'Only one number fits',
+    look: 'Pick one empty square. Rule out every number already in its row, its column and its box.',
+    why: 'If just one number is left, that\'s the answer. Squares in busy rows and boxes are the best ones to try.',
+  },
+  pointing: {
+    name: 'Pointing',
+    look: 'In one box, find a number whose possible squares all sit in a single row (or column).',
+    why: 'The box needs that number, so it must go in that line, inside this box. So the rest of the line, outside the box, can\'t have it: take it out of their notes.',
+  },
+  claiming: {
+    name: 'Box and line',
+    look: 'Pointing the other way round: in one row (or column), find a number whose possible squares all fall in the same box.',
+    why: 'The line needs that number, so it\'s in that box, on this line. So the rest of the box can\'t have it.',
+  },
+  nakedPair: {
+    name: 'Pair',
+    look: 'Two squares in the same row, column or box whose notes are the same two numbers, and nothing else.',
+    why: 'Those two numbers have to go in those two squares, one each. So nowhere else in that row, column or box can have them.',
+  },
+  hiddenPair: {
+    name: 'Hidden pair',
+    look: 'Two numbers that, in one row, column or box, fit only the same two squares.',
+    why: 'Those squares must be those two numbers, so every other note in them can go.',
+  },
+  nakedTriple: {
+    name: 'Triple',
+    look: 'Three squares in one row, column or box whose notes, between them, are just three numbers. Each square needn\'t have all three.',
+    why: 'Those three numbers fill those three squares, so the rest of the row, column or box can\'t have them.',
+  },
+  hiddenTriple: {
+    name: 'Hidden triple',
+    look: 'Three numbers that, in one row, column or box, fit only the same three squares.',
+    why: 'Those squares must be those three numbers, so their other notes can go.',
+  },
+  xWing: {
+    name: 'X-Wing',
+    look: 'Pick a number. Find two rows where it fits in only two squares each, and those squares share the same two columns: the corners of a rectangle.',
+    why: 'Whichever way round it falls, the number takes one corner in each of those two columns. So the rest of both columns can\'t have it. (It works with rows and columns swapped, too.)',
+  },
+  nakedQuad: {
+    name: 'Quad',
+    look: 'Like a pair or a triple, with four: four squares in one row, column or box whose notes, between them, are just four numbers.',
+    why: 'Those four numbers fill those four squares, so the rest of the line or box can\'t have them. The hidden quad is the mirror image (four numbers that fit only the same four squares, so those squares lose their other notes), but it\'s very rare.',
+  },
+  xyWing: {
+    name: 'XY-Wing',
+    look: 'Three squares with two notes each. The pivot has two numbers, say A and B. It sees one wing with A and C, and another with B and C.',
+    why: 'If the pivot is A, the first wing is C; if it\'s B, the second wing is C. Either way one wing is C, so any square that sees both wings can\'t be C.',
+  },
+  swordfish: {
+    name: 'Swordfish',
+    look: 'An X-Wing with three: a number that, in three rows, fits only in squares in the same three columns.',
+    why: 'The three rows put the number in those three columns, one each. So the rest of those columns can\'t have it. (Or rows and columns swapped.)',
+  },
+  xyzWing: {
+    name: 'XYZ-Wing',
+    look: 'Like an XY-Wing, but the pivot has three notes: X, Y and Z. One wing has X and Z, the other Y and Z.',
+    why: 'Whatever the pivot turns out to be, one of the three squares is Z. So a square that sees all three can\'t be Z.',
+  },
+};
+
+const LINE = (cells) => (cells.every((i) => rowOf(i) === rowOf(cells[0])) ? `row ${rowOf(cells[0]) + 1}` : `column ${colOf(cells[0]) + 1}`);
+const and = (xs) => (xs.length < 2 ? String(xs[0]) : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+
+/** What the worked example shows, in a sentence. `digits` lists a mask's numbers. */
+export function exampleText(tech, s, digits) {
+  const goneList = s.elim ? [...new Set(s.elim.flatMap(([, m]) => digits(m)))] : [];
+  const gone = goneList.length ? `${and(goneList)} ${goneList.length > 1 ? 'go' : 'goes'}` : null;
+  switch (tech) {
+    case 'hiddenSingle': return `Here: in ${unitWords(s.unit)}, the ${s.digit} fits only the glowing square. The other ${s.digit}s on the grid rule out the rest.`;
+    case 'nakedSingle': return `Here: the glowing square's row, column and box have every number but ${s.place[1]}.`;
+    case 'pointing': return `Here: in ${unitWords(s.unit)}, the ${s.digit} can only be in the gold squares, all in ${LINE(s.cells)}. So the crossed-out ${s.digit} goes.`;
+    case 'claiming': return `Here: in ${unitWords(s.unit)}, the ${s.digit} can only be in the gold squares, all in one box. So the crossed-out ${s.digit} goes.`;
+    case 'nakedPair': case 'nakedTriple': case 'nakedQuad':
+      return `Here: in ${unitWords(s.unit)}, the gold squares hold only ${and(digits(s.cells.reduce((m, i) => m | s.masks[i], 0)))}. So the crossed-out ${gone}.`;
+    case 'hiddenPair': case 'hiddenTriple':
+      return `Here: in ${unitWords(s.unit)}, the ${and(digits(s.keep))} fit only the gold squares, so those squares lose their other notes (crossed out).`;
+    case 'xWing': case 'swordfish':
+      return `Here: the gold squares are the only places for the ${s.digit} in their ${s.lines}, and they share the same ${s.lines === 'rows' ? 'columns' : 'rows'}. So the crossed-out ${s.digit} goes.`;
+    case 'xyWing': case 'xyzWing':
+      return `Here: the ringed square is the pivot, and the other gold squares are the wings. So the crossed-out ${s.digit} goes.`;
+    default: return '';
+  }
+}
