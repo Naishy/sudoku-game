@@ -49,7 +49,7 @@ export function titleOf(level, palette) {
  * Paint a solved grid (81 digits) into ctx, size × size pixels, at x, y.
  * `reveal` (0–1) paints it in a wave from the top left, for the finishing animation.
  */
-export function paint(ctx, grid, { x = 0, y = 0, size, level, palette, seed = '', reveal = 1 }) {
+export function paint(ctx, grid, { x = 0, y = 0, size, level, palette, seed = '', reveal = 1, hands = null, inks = null }) {
   const P = PALETTES[palette].colours;
   const rnd = rng(seedOf(`${seed}:${level}`));
   const cell = size / 9;
@@ -121,9 +121,31 @@ export function paint(ctx, grid, { x = 0, y = 0, size, level, palette, seed = ''
     }
   }
   ctx.globalAlpha = 1;
+  // painted together: each player's squares carry a little stroke in their own ink, like a
+  // signature, so the work shows whose hand is whose (hands: 81 characters, '1' or '2')
+  if (hands && inks) signatures(ctx, hands, inks, cell, shown);
   // the surface: a fine grain so it reads as paint, not pixels
   if (reveal >= 1) grain(ctx, size, rnd, level);
   ctx.restore();
+}
+
+function signatures(ctx, hands, inks, cell, shown) {
+  const rnd = rng(seedOf(String(hands)));
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 81; i++) {
+    const who = Number(hands[i]);
+    const a = shown(Math.floor(i / 9), i % 9);
+    if (!(who === 1 || who === 2) || a <= 0) continue;
+    const x0 = (i % 9) * cell, y0 = Math.floor(i / 9) * cell;
+    // a short, fine stroke under the middle of the square, a little different each time
+    const y = y0 + cell * (0.82 + (rnd() - 0.5) * 0.05);
+    const l = x0 + cell * (0.34 + rnd() * 0.05), r = x0 + cell * (0.62 + rnd() * 0.05);
+    ctx.globalAlpha = a * 0.92;
+    ctx.strokeStyle = inks[who - 1];
+    ctx.lineWidth = Math.max(1, cell * 0.055);
+    ctx.beginPath(); ctx.moveTo(l, y); ctx.quadraticCurveTo((l + r) / 2, y + cell * 0.05 * (rnd() - 0.2), r, y - cell * 0.03); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 }
 
 function shape(ctx, kind, x, y, s, turn) {

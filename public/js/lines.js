@@ -85,6 +85,17 @@ export function finishLine(level, { who = null, hints = 0, christmas = false } =
   return pick(lines);
 }
 
+/** Heidi's line on a work painted together. */
+export function togetherLine() {
+  return pick([
+    'Two heads, one painting. Thanks heaps, darl.',
+    'A collaboration! That\'s going on the wall.',
+    'Look at you two. Ed, come and look at this!',
+    'Lovely teamwork. Time for a coffee.',
+    'Very gallery: a joint work. You\'re my favourites.',
+  ]);
+}
+
 export function homeNote(doneToday, total) {
   if (doneToday === total) return 'All four hung today. Thanks heaps!';
   if (doneToday === 0) return 'Four new puzzles today. Start wherever you like.';

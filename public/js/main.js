@@ -13,6 +13,8 @@ import { GIFT, shouldShowGift, markGiftSeen, fromCard } from './gift.js';
 import { drawHeidi } from './cast.js';
 import { drawZiggy, ZIGGY_BOX } from './ziggy.js';
 import { Walker, Stroll, seatNear, napSeat } from './walk.js';
+import { INKS, pairKey, pairFromKey, newCode, isCode, cleanName } from './pair.js';
+import { PairLink } from './together.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -40,7 +42,7 @@ function show(name) {
   if (name !== 'home') homeCat?.hide();
   if (name === 'home') { renderHome(); homeCat?.enter(); if (updateReady) location.reload(); }
 }
-const modalOpen = () => ['welcome', 'how', 'settings', 'menu', 'install', 'gift'].some((m) => !$(m).classList.contains('hidden'));
+const modalOpen = () => ['welcome', 'how', 'settings', 'menu', 'install', 'gift', 'together'].some((m) => !$(m).classList.contains('hidden'));
 
 // --- the cast, drawn small ------------------------------------------------------------------
 function face(canvas, who, px) {
@@ -102,23 +104,29 @@ function renderHome() {
     holder.append(b);
   }
   $('home-note').textContent = L.homeNote(doneToday, LEVELS.length);
-  $('works-count').textContent = works.length ? `(${works.length})` : '';
+  const pr = store.pairing();
+  $('together-sub').textContent = pr ? `Carry on with ${pr.partner || 'your partner'} (code ${pr.code})` : 'Two phones, one grid';
+  const n = works.length + store.pairWorks().length;
+  $('works-count').textContent = n ? `(${n})` : '';
 }
 
 const solutions = new Map();
+const puzzleOf = (key) => (key[0] === 'p' ? pairFromKey(key) : fromKey(key));
 function solutionOf(key) {
-  if (!solutions.has(key)) { const f = fromKey(key); solutions.set(key, f ? solve(parse(f.puzzle)) : null); }
+  if (!solutions.has(key)) { const f = puzzleOf(key); solutions.set(key, f ? solve(parse(f.puzzle)) : null); }
   return solutions.get(key);
 }
-function paintingCanvas(key, palette, px) {
+// a work painted together carries whose hand placed each square
+const handsOf = (w) => (w?.pair ? { hands: w.hands, inks: INKS } : {});
+function paintingCanvas(key, palette, px, w = null) {
   const cv = document.createElement('canvas');
   cv.width = Math.round(px * DPR); cv.height = Math.round(px * DPR);
   cv.style.width = `${px}px`; cv.style.height = `${px}px`;
   const ctx = cv.getContext('2d');
   ctx.scale(DPR, DPR);
-  const f = fromKey(key);
+  const f = puzzleOf(key);
   const sol = solutionOf(key);
-  if (f && sol) paint(ctx, sol, { size: px, level: f.level, palette, seed: key });
+  if (f && sol) paint(ctx, sol, { size: px, level: f.level, palette, seed: key, ...handsOf(w) });
   return cv;
 }
 
@@ -213,7 +221,7 @@ function openPuzzle(key, { daily, day, palette, tutorial = null }) {
 function snapshot() { return { v: G.values.slice(), n: Int16Array.from(G.notes) }; }
 function pushUndo() { G.undo.push(snapshot()); if (G.undo.length > 400) G.undo.shift(); }
 function save() {
-  if (!G || G.done || G.tutorial) return;
+  if (!G || G.done || G.tutorial || G.pair) return;
   const v = G.values.map((x, i) => (G.givens[i] ? 0 : x));
   store.saveProgress(G.key, { v: v.map((x) => (x ? String(x) : '.')).join(''), n: store.encodeNotes(G.notes), s: G.secs, h: G.hints, d: G.day, p: G.palette });
 }
@@ -230,6 +238,7 @@ function select(i) {
   }
   sound.tap();
   render();
+  if (G.pair) G.pair.link?.send({ t: 'sel', i: G.sel });
   coachEvent('select', i);
 }
 
@@ -242,6 +251,13 @@ function input(d) {
     if (i >= 0) G.sel = -1;
     haptics.tap();
     render();
+    return;
+  }
+  if (G.pair) {
+    if (G.notesMode && G.values[i]) return;
+    G.digit = d;
+    haptics[G.notesMode ? 'note' : 'place']();
+    pairSend(G.notesMode ? { t: 'note', i, d } : { t: 'place', i, d, tidy: S.tidy });
     return;
   }
   if (G.notesMode) {
@@ -276,6 +292,7 @@ function erase() {
   if (!G || G.done) return;
   const i = G.sel;
   if (i < 0 || G.givens[i] || (!G.values[i] && !G.notes[i])) return;
+  if (G.pair) { haptics.tap(); pairSend({ t: 'erase', i }); return; }
   pushUndo();
   G.values[i] = 0;
   G.notes[i] = 0;
@@ -285,6 +302,7 @@ function erase() {
 }
 
 function undo() {
+  if (G?.pair && !G.done) { haptics.tap(); pairSend({ t: 'undo' }); return; }
   if (!G || G.done || !G.undo.length) return;
   const s = G.undo.pop();
   G.values = s.v; G.notes = s.n;
@@ -312,6 +330,7 @@ function afterChange() {
 // --- Ziggy's hints ----------------------------------------------------------------------------
 function hint() {
   if (!G || G.done) return;
+  if (G.pair) { haptics.hint(); pairSend({ t: 'hint' }); return; }
   sound.hint(); haptics.hint();
   const p = G.pending;
   // second tap: do it
@@ -385,7 +404,8 @@ function render() {
     c.className = 'cell';
     if (colOf(i) === 2 || colOf(i) === 5) c.classList.add('br');
     if (rowOf(i) === 2 || rowOf(i) === 5) c.classList.add('bb');
-    if (G.givens[i]) c.classList.add('given'); else if (v) c.classList.add('mine');
+    if (G.givens[i]) c.classList.add('given'); else if (v) c.classList.add(G.by ? `ink${G.by[i] || G.pair.seat}` : 'mine');
+    if (G.pair && i === G.pair.theirSel && i !== sel) c.classList.add('their-sel');
     if (i === sel) c.classList.add('sel');
     if (same && i !== sel) c.classList.add('same');
     if (v && clash.has(i)) c.classList.add('clash');
@@ -519,7 +539,8 @@ function tick() {
   t.classList.toggle('off', !S.timer);
 }
 setInterval(() => {
-  if (!G || G.done || screen !== 'play' || document.hidden || modalOpen()) return;
+  if (!G || G.done || screen !== 'play' || document.hidden || (modalOpen() && !G.pair)) return;
+  if (G.pair && !G.pair.link?.seat) return; // the clock's paused while we're not connected
   G.secs++;
   tick();
   maybeNap();
@@ -549,8 +570,19 @@ function checkDone() {
   submitFamilyScore(score, work, newBest);
 }
 
+const paletteOfWork = (w) => w.palette ?? paletteFor(w.day, dateOfDay(w.day));
+const partnerOf = (w) => w.names[2 - w.me] || 'a friend';
 function labelFor(work, f) {
   const date = dateOfDay(work.day);
+  if (work.pair) {
+    return {
+      artist: `${work.names[0]} & ${work.names[1]}`,
+      title: titleOf(f.level, paletteOfWork(work)),
+      year: `, ${date.getFullYear()}`,
+      medium: `${STYLES[f.level].medium}, by two hands. Solved together in ${longTime(work.secs)}${work.hints ? `, with ${work.hints} hint${work.hints > 1 ? 's' : ''}` : ''}, ${date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}.`,
+      inks: work.names,
+    };
+  }
   const artist = Family?.player?.name || 'Heidi';
   return {
     artist: artist === 'Heidi' ? 'Heidi (b. Canberra)' : artist,
@@ -562,7 +594,7 @@ function labelFor(work, f) {
 
 function frameSize() { return Math.min(300, innerWidth - 90, Math.round(innerHeight * 0.4)); }
 
-function animatePainting(canvas, key, level, palette, px, ms = 1700) {
+function animatePainting(canvas, key, level, palette, px, ms = 1700, w = null) {
   canvas.width = Math.round(px * DPR); canvas.height = Math.round(px * DPR);
   canvas.style.width = `${px}px`; canvas.style.height = `${px}px`;
   const ctx = canvas.getContext('2d');
@@ -572,16 +604,26 @@ function animatePainting(canvas, key, level, palette, px, ms = 1700) {
     const k = Math.min(1, (now - t0) / ms);
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     ctx.clearRect(0, 0, px, px);
-    paint(ctx, sol, { size: px, level, palette, seed: key, reveal: k });
+    paint(ctx, sol, { size: px, level, palette, seed: key, reveal: k, ...handsOf(w) });
     if (k < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
+}
+
+// the wall label: who's who, by the colour of their stroke
+function labelInks(holder, lab) {
+  holder.querySelector('.label-inks')?.remove();
+  if (!lab.inks) return;
+  const box = el('span', 'label-inks');
+  lab.inks.forEach((n, j) => { const s = el('span'); const i = el('i'); i.style.background = INKS[j]; s.append(i, document.createTextNode(n)); box.append(s); });
+  holder.append(box);
 }
 
 function showFinish(work, { score, newBest }) {
   const f = fromKey(work.key);
   const lab = labelFor(work, f);
   $('fin-artist').textContent = lab.artist;
+  labelInks($('fin-artist'), lab);
   $('fin-title').textContent = lab.title;
   $('fin-year').textContent = lab.year;
   $('fin-medium').textContent = lab.medium;
@@ -599,29 +641,32 @@ function showFinish(work, { score, newBest }) {
 
 // --- the gallery ---------------------------------------------------------------------------------
 function renderWorks() {
-  const list = store.works().slice().sort((a, b) => b.day - a.day || b.score - a.score);
+  const list = [...store.works(), ...store.pairWorks()].sort((a, b) => b.day - a.day || (b.score ?? 0) - (a.score ?? 0));
   const grid = $('works-grid');
   grid.innerHTML = '';
   $('works-empty').classList.toggle('hidden', list.length > 0);
   $('works-sub').textContent = list.length ? `${list.length} work${list.length > 1 ? 's' : ''}` : '';
   const px = Math.min(150, Math.floor((Math.min(innerWidth, 560) - 32 - 18) / 2) - 16);
   for (const w of list) {
-    const f = fromKey(w.key);
+    const f = puzzleOf(w.key);
     if (!f) continue;
+    const pal = paletteOfWork(w);
     const b = el('button', 'work-tile');
     const fr = el('div', 'mini-frame');
-    fr.append(paintingCanvas(w.key, w.palette, px));
+    fr.append(paintingCanvas(w.key, pal, px, w));
     const cap = el('div', 'cap');
-    cap.append(el('i', null, titleOf(f.level, w.palette)), el('br'), document.createTextNode(`${dateOfDay(w.day).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} · ${clock(w.secs)}`));
+    const when = dateOfDay(w.day).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    cap.append(el('i', null, titleOf(f.level, pal)), el('br'), document.createTextNode(w.pair ? `${when} · with ${partnerOf(w)}` : `${when} · ${clock(w.secs)}`));
     b.append(fr, cap);
     b.onclick = () => openWork(w);
     grid.append(b);
   }
 }
 function openWork(w) {
-  const f = fromKey(w.key);
+  const f = puzzleOf(w.key);
   const lab = labelFor(w, f);
   $('work-artist').textContent = lab.artist;
+  labelInks($('work-artist'), lab);
   $('work-title').textContent = lab.title;
   $('work-year').textContent = lab.year;
   $('work-medium').textContent = lab.medium;
@@ -632,17 +677,17 @@ function openWork(w) {
   cv.style.width = `${px}px`; cv.style.height = `${px}px`;
   const ctx = cv.getContext('2d');
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  paint(ctx, solutionOf(w.key), { size: px, level: f.level, palette: w.palette, seed: w.key });
+  paint(ctx, solutionOf(w.key), { size: px, level: f.level, palette: paletteOfWork(w), seed: w.key, ...handsOf(w) });
   $('work-save').onclick = () => sharePicture(w);
   tel.log('work-view', { key: w.key });
 }
-$('btn-works').onclick = () => { sound.tap(); renderWorks(); show('works'); tel.log('works', { n: store.works().length }); };
+$('btn-works').onclick = () => { sound.tap(); renderWorks(); show('works'); tel.log('works', { n: store.works().length, together: store.pairWorks().length }); };
 $('works-back').onclick = () => show('home');
 $('work-back').onclick = () => { renderWorks(); show('works'); };
 
 /** The work on a gallery wall with its label, as a picture to keep or send. */
 async function sharePicture(w) {
-  const f = fromKey(w.key);
+  const f = puzzleOf(w.key);
   const lab = labelFor(w, f);
   const W = 1200, H = 1500;
   const cv = document.createElement('canvas');
@@ -652,7 +697,7 @@ async function sharePicture(w) {
   const size = 820, x = (W - size) / 2, y = 170;
   ctx.fillStyle = 'rgba(40,30,20,0.16)'; ctx.fillRect(x - 40 + 12, y - 40 + 30, size + 80, size + 80);
   ctx.fillStyle = '#fff'; ctx.fillRect(x - 40, y - 40, size + 80, size + 80);
-  paint(ctx, solutionOf(w.key), { x, y, size, level: f.level, palette: w.palette, seed: w.key });
+  paint(ctx, solutionOf(w.key), { x, y, size, level: f.level, palette: paletteOfWork(w), seed: w.key, ...handsOf(w) });
   ctx.fillStyle = '#cfc7b8'; ctx.fillRect(x, y + size + 110, 4, 170);
   ctx.fillStyle = '#26221e';
   ctx.font = '700 34px "DM Sans", sans-serif'; ctx.fillText(lab.artist, x + 30, y + size + 140);
@@ -682,6 +727,253 @@ function wrap(ctx, text, x, y, w, lh) {
     if (ctx.measureText(t).width > w && line) { ctx.fillText(line, x, y); y += lh; line = word; } else line = t;
   }
   if (line) ctx.fillText(line, x, y);
+}
+
+// --- Together: two phones, one grid ---------------------------------------------------------
+// The room (src/pair-room.js) holds the puzzle; each phone sends its moves and draws what
+// comes back. Each player's numbers are in their own ink, and Undo and hints are shared.
+const INK_NAMES = ['emerald', 'rose'];
+let link = null; // this phone's live link to its room
+
+function pairSend(m) {
+  if (!G?.pair?.link?.send(m)) say('ziggy', 'Just a moment: reconnecting to the other phone…');
+}
+
+function openTogether(msg = '') {
+  sound.tap();
+  const name = $('tg-name');
+  name.value = store.myName() || Family?.player?.name || '';
+  const pr = store.pairing();
+  const resume = $('tg-resume');
+  resume.classList.toggle('hidden', !pr);
+  if (pr) {
+    resume.textContent = `Back to your grid with ${pr.partner || 'your partner'}`;
+    resume.onclick = () => connectPair({ code: pr.code });
+  }
+  const holder = $('tg-levels');
+  holder.innerHTML = '';
+  for (const level of LEVELS) {
+    const info = LEVEL_INFO[level];
+    const b = el('button');
+    b.append(document.createTextNode(info.name), el('span', 'dots', '●'.repeat(info.dots) + '○'.repeat(4 - info.dots)), el('small', null, info.blurb.split('.')[0]));
+    b.onclick = () => connectPair({ code: newCode(), key: pairKey(level, today().day), create: true });
+    holder.append(b);
+  }
+  $('tg-code').value = '';
+  $('tg-msg').textContent = msg;
+  $('together').classList.remove('hidden');
+}
+$('btn-together').onclick = () => openTogether();
+$('tg-close').onclick = () => { leavePair(); $('together').classList.add('hidden'); };
+$('tg-code').addEventListener('input', (e) => {
+  e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+});
+const joinByCode = () => {
+  const code = $('tg-code').value.trim().toUpperCase();
+  if (!isCode(code)) { $('tg-msg').textContent = 'The code is the four letters on the other phone.'; return; }
+  connectPair({ code });
+};
+$('tg-join').onclick = joinByCode;
+$('tg-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinByCode(); });
+
+function connectPair({ code, key = null, create = false, tries = 0 }) {
+  const name = cleanName($('tg-name').value);
+  if (!name) { $('tg-msg').textContent = 'Pop your name in first, so the painting can say who did what.'; $('tg-name').focus(); return; }
+  store.saveName(name);
+  refreshInstallAddress();
+  sound.unlock();
+  leavePair();
+  $('tg-msg').textContent = create ? 'Setting up the grid…' : 'Finding that grid…';
+  const l = new PairLink({
+    code, key, create, id: store.pairId(), name,
+    onState: (v) => {
+      if (link !== l || !l.seat) return;
+      if (G?.pair?.link === l) applyView(v); else openPair(l, v);
+    },
+    onStatus: (st) => {
+      if (link !== l) return;
+      const playing = G?.pair?.link === l;
+      if (playing) { G.pair.status = st; pairTitle(); }
+      if (st === 'failed') {
+        link = null;
+        if (tries < 2) connectPair({ code: newCode(), key, create, tries: tries + 1 });
+        else $('tg-msg').textContent = 'Couldn\'t set up a grid just now. Check the wifi and try again.';
+      } else if (st === 'gone') {
+        link = null;
+        if (store.pairing()?.code === code) store.savePairing(null);
+        if (playing) { G = null; show('home'); openTogether('That grid has been tidied away. Start a new one?'); } else {
+          $('tg-resume').classList.add('hidden');
+          $('tg-msg').textContent = 'No grid with that code. Check the letters (and the wifi)?';
+        }
+      } else if (st === 'full') {
+        link = null;
+        $('tg-msg').textContent = 'That grid already has two players.';
+      }
+    },
+  });
+  link = l;
+  tel.log(create ? 'pair-create' : 'pair-join', create ? { key } : {});
+}
+
+function leavePair() {
+  if (link) { link.close(); link = null; }
+  if (G?.pair) {
+    if (!G.done) tel.log('pair-leave', { key: G.key, secs: G.secs, filled: G.values.filter((v, i) => v && !G.givens[i]).length });
+    G = null;
+  }
+}
+
+function openPair(l, v) {
+  $('together').classList.add('hidden');
+  G = {
+    key: v.key, level: v.level, daily: false, day: v.day, palette: paletteFor(v.day, dateOfDay(v.day)),
+    givens: parse(v.givens), solution: solutionOf(v.key), values: parse(v.values), notes: new Int16Array(81), by: new Int8Array(81),
+    secs: v.secs, hints: v.hints, sel: -1, digit: 0, notesMode: false, undo: [], pending: null, done: false, tutorial: null,
+    pair: { link: l, code: l.code, seat: l.seat, players: [], theirSel: -1, status: 'open', pendingId: null, lastKey: null, partner: null },
+  };
+  $('play-level').textContent = `${LEVEL_INFO[v.level].name}, together`;
+  say(null);
+  $('coach-skip').classList.add('hidden');
+  $('timer').classList.remove('hidden');
+  show('play');
+  applyView(v, true);
+  fitGrid();
+  tick();
+  tel.log('pair-start', { key: v.key, level: v.level, seat: l.seat, players: v.players.length });
+}
+
+/** The room's latest: the grid, whose hand is whose, a hint, and what just happened. */
+function applyView(v, first = false) {
+  const P = G.pair;
+  G.values = parse(v.values);
+  G.notes = Int16Array.from(v.notes);
+  G.by = Int8Array.from(v.by, Number);
+  G.hints = v.hints;
+  if (Math.abs(G.secs - v.secs) > 2) G.secs = v.secs;
+  P.status = 'open';
+  const had = P.players.length;
+  P.players = v.players;
+  const other = v.players[2 - P.seat];
+  P.theirSel = other?.online ? other.sel : -1;
+  document.documentElement.style.setProperty('--their', INKS[2 - P.seat]);
+  // Ziggy's hint, on both phones
+  if (v.pending) {
+    if (P.pendingId !== v.pending.id) { P.pendingId = v.pending.id; G.pending = pendingFrom(v.pending); G.sel = -1; G.digit = 0; sound.hint(); }
+  } else { G.pending = null; P.pendingId = null; }
+  // what just happened (from either phone): sounds and words, once each
+  const e = v.last;
+  const ek = e ? `${e.n}:${e.kind}:${e.i ?? ''}` : null;
+  if (e && ek !== P.lastKey && !first) pairEvent(e);
+  P.lastKey = ek;
+  // who's here
+  if (other && other.name !== P.partner) {
+    P.partner = other.name;
+    store.savePairing({ code: P.code, key: G.key, partner: other.name });
+    if (!first || had) say('ziggy', `${other.name}'s here. Your numbers are ${INK_NAMES[P.seat - 1]}; ${other.name}'s are ${INK_NAMES[2 - P.seat]}.`);
+  } else if (!other) {
+    store.savePairing({ code: P.code, key: G.key, partner: null });
+    if (first) say('ziggy', `Waiting for your partner. On their phone: Together, then join with the code ${P.code}. You can start without them.`);
+  }
+  if (first && other) say('ziggy', `You're with ${other.name}. Your numbers are ${INK_NAMES[P.seat - 1]}; ${other.name}'s are ${INK_NAMES[2 - P.seat]}.`);
+  if (G.sel >= 0 && !G.pending) G.digit = G.values[G.sel] || G.digit;
+  pairTitle();
+  render();
+  if (v.done && !G.done) finishPair(v);
+}
+
+// a hint from the room, laid out the way hint() does it for one player
+function pendingFrom(p) {
+  if (p.wrong) {
+    const avoid = new Set(p.wrong);
+    say('ziggy', L.mistakeText(p.wrong.length));
+    return { id: p.id, stage: 1, wrong: p.wrong, glow: p.wrong, hl: [], region: p.wrong, avoid, target: p.wrong[0], seat: seatNear(G.values, G.notes, p.wrong, avoid, p.wrong[0]) };
+  }
+  const h = p.h;
+  const target = h.place[0];
+  let hl = [];
+  let glow = [target];
+  if (h.tech === 'hiddenSingle') { hl = UNITS[h.unit]; glow = []; } else if (h.via) hl = h.via.cells;
+  const region = [...hl, ...glow, target];
+  const avoid = new Set([...region, target]);
+  say('ziggy', L.hintText(h));
+  return { id: p.id, stage: 1, h, hl, glow, region, avoid, target, seat: seatNear(G.values, G.notes, region, avoid, target) };
+}
+
+function pairEvent(e) {
+  const mine = e.seat === G.pair.seat;
+  if (e.kind === 'place') {
+    sound.place(e.d);
+    if (!mine) haptics.tap();
+    for (const u of unitsOf(e.i)) {
+      if (UNITS[u].every((j) => G.values[j] && G.values[j] === G.solution[j])) {
+        setTimeout(() => { for (const j of UNITS[u]) { cells[j].classList.remove('shimmer'); void cells[j].offsetWidth; cells[j].classList.add('shimmer'); } }, 60);
+        sound.unit(e.d); haptics.unit();
+      }
+    }
+  } else if (e.kind === 'note') sound.note();
+  else if (e.kind === 'erase' || e.kind === 'undo') sound.erase();
+  else if (e.kind === 'reveal') {
+    sound.place(e.d);
+    walker.purr(); sound.purr(0.6); haptics.purr();
+    say('ziggy', L.revealText(e.h));
+  } else if (e.kind === 'cleared') say('ziggy', 'There. Off you go again!');
+  else if (e.kind === 'stuck') say('ziggy', L.STUCK);
+  else if (e.kind === 'restart') say('ziggy', 'A fresh start. (Undo brings it all back.)');
+}
+
+// the top bar: each player's ink and name (faded while their phone's away)
+function pairTitle() {
+  if (!G?.pair) return;
+  const P = G.pair;
+  const sub = $('play-sub');
+  sub.textContent = '';
+  if (P.status === 'reconnecting') { sub.textContent = 'Reconnecting…'; return; }
+  const who = el('span', 'pair-who');
+  P.players.forEach((p, j) => {
+    const s = el('span', p.online ? null : 'away');
+    const dot = el('i');
+    dot.style.background = INKS[j];
+    s.append(dot, document.createTextNode(p.name));
+    who.append(s);
+  });
+  if (P.players.length < 2) { const c = el('span'); c.append('Code ', el('span', 'pair-code', P.code)); who.append(c); }
+  sub.append(who);
+}
+
+function finishPair(v) {
+  G.done = true;
+  G.sel = -1; G.digit = 0;
+  render();
+  sound.finish(); haptics.finish();
+  const names = v.players.map((p) => p.name);
+  while (names.length < 2) names.push('a friend');
+  const work = { key: v.key, day: v.day, secs: v.secs, hints: v.hints, me: G.pair.seat, hands: v.by, names, pair: true };
+  store.addPairWork(work);
+  store.savePairing(null);
+  refreshInstallAddress();
+  const mine = [...v.by].filter((x) => Number(x) === G.pair.seat).length;
+  const theirs = [...v.by].filter((x) => Number(x) === 3 - G.pair.seat).length;
+  tel.log('pair-finish', { key: v.key, level: v.level, secs: v.secs, hints: v.hints, seat: G.pair.seat, mine, theirs });
+  const l = G.pair.link;
+  setTimeout(() => { l.close(); if (link === l) link = null; }, 1500);
+  setTimeout(() => showPairFinish(work), 700);
+}
+
+function showPairFinish(work) {
+  const f = pairFromKey(work.key);
+  const lab = labelFor(work, f);
+  $('fin-artist').textContent = lab.artist;
+  labelInks($('fin-artist'), lab);
+  $('fin-title').textContent = lab.title;
+  $('fin-year').textContent = lab.year;
+  $('fin-medium').textContent = lab.medium;
+  $('finish').querySelector('.finish-score').classList.add('hidden');
+  $('fin-heidi').textContent = `“${L.togetherLine()}” Heidi`;
+  $('fin-save').classList.remove('hidden');
+  $('fin-home').textContent = 'Lovely';
+  show('finish');
+  animatePainting($('finish-canvas'), work.key, f.level, paletteOfWork(work), frameSize(), 1700, work);
+  $('fin-save').onclick = () => sharePicture(work);
 }
 
 // --- the guide (first go) ---------------------------------------------------------------------------
@@ -761,6 +1053,7 @@ $('fin-home').onclick = () => { G = null; show('home'); };
 
 // --- buttons, menus, settings -------------------------------------------------------------------
 $('btn-back').onclick = () => {
+  if (G?.pair) { leavePair(); show('home'); return; }
   if (G && !G.done && !G.tutorial) { save(); tel.log('leave', { key: G.key, secs: G.secs, filled: G.values.filter((v, i) => v && !G.givens[i]).length }); }
   if (G?.tutorial) store.markInducted();
   G = null;
@@ -771,6 +1064,7 @@ $('m-close').onclick = () => $('menu').classList.add('hidden');
 $('m-notes').onclick = () => {
   $('menu').classList.add('hidden');
   if (!G || G.done) return;
+  if (G.pair) { pairSend({ t: 'fillNotes' }); tel.log('fill-notes', { key: G.key }); return; }
   pushUndo();
   const cand = candidates(G.values);
   for (let i = 0; i < 81; i++) if (!G.values[i]) G.notes[i] = cand[i];
@@ -780,6 +1074,7 @@ $('m-notes').onclick = () => {
 $('m-clear-notes').onclick = () => {
   $('menu').classList.add('hidden');
   if (!G || G.done) return;
+  if (G.pair) { pairSend({ t: 'clearNotes' }); return; }
   pushUndo();
   G.notes = new Int16Array(81);
   afterChange();
@@ -787,6 +1082,7 @@ $('m-clear-notes').onclick = () => {
 $('m-restart').onclick = () => {
   $('menu').classList.add('hidden');
   if (!G || G.done) return;
+  if (G.pair) { pairSend({ t: 'restart' }); return; }
   pushUndo();
   G.values = G.givens.slice();
   G.notes = new Int16Array(81);

@@ -9,9 +9,9 @@
 //
 // Import this module first: it restores before anything else reads storage.
 
-import { decodeWork, encodeWork, mergeWorks } from './store.js';
+import { decodeWork, encodeWork, mergeWorks, decodePairWork, encodePairWork, mergePairWorks } from './store.js';
 
-const KEYS = ['gw.best', 'gw.inducted', 'gw.works', 'gw.giftSeen', 'gw.device', 'gw.settings'];
+const KEYS = ['gw.best', 'gw.inducted', 'gw.works', 'gw.giftSeen', 'gw.device', 'gw.settings', 'gw.pairs', 'gw.name'];
 export const CARRY_MAX = 1800; // characters: room for the best, the settings and a month or so of works
 
 function get(k) { try { return localStorage.getItem(k); } catch { return null; } }
@@ -42,6 +42,10 @@ export function merge(have, carried) {
       const list = (s) => String(s ?? '').split(',').filter(Boolean).map(decodeWork).filter(Boolean);
       const merged = mergeWorks(list(a), list(b)).map(encodeWork).join(',');
       if (merged !== a) out[k] = merged; // every work from both, the better score kept
+    } else if (k === 'gw.pairs') {
+      const list = (s) => String(s ?? '').split(',').filter(Boolean).map(decodePairWork).filter(Boolean);
+      const merged = mergePairWorks(list(a), list(b)).map(encodePairWork).join(',');
+      if (merged !== a) out[k] = merged; // works painted together, from both
     } else if (k === 'gw.inducted' || k === 'gw.giftSeen') {
       if (b === '1') out[k] = '1'; // done stays done
     } else if (a === null) {

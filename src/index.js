@@ -5,6 +5,9 @@ const GAME = 'grid-works'; // board id: tags this game's rows in the shared stat
 const MAX_BODY = 200_000;
 const MAX_EVENTS = 200;
 const ID = /^[\w-]{6,40}$/;
+const CODE = /^[A-HJKMNP-Z]{4}$/; // a Together room's code (see CODE_LETTERS in public/js/pair.js)
+
+export { PairRoom } from './pair-room.js';
 
 export default {
   async fetch(request, env) {
@@ -12,6 +15,13 @@ export default {
     if (url.pathname === '/api/log') {
       if (request.method !== 'POST') return new Response('Method not allowed', { status: 405 });
       return logEvents(request, env);
+    }
+    if (url.pathname === '/api/pair') {
+      // Together: a phone's live link to its room (src/pair-room.js)
+      const code = url.searchParams.get('code');
+      if (!CODE.test(code || '')) return new Response('Bad code', { status: 400 });
+      if (!env.PAIRS) return new Response('Together is not set up here', { status: 503 });
+      return env.PAIRS.get(env.PAIRS.idFromName(code)).fetch(request);
     }
     if (url.pathname === '/app.webmanifest') return manifest(request, env, url);
     return env.ASSETS.fetch(request);
