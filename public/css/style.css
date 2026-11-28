@@ -214,3 +214,39 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
   .say { height: 84px; margin: 4px 2px 2px; }
   .tool { font-size: 0.7rem; }
 }
+
+/* --- Together ------------------------------------------------------------------------------ */
+:root { --ink1: #1d6b5f; --ink2: #9b3d5a; } /* the two players' inks (INKS in pair.js) */
+.together-btn { display: flex; align-items: center; gap: 12px; width: 100%; margin: 10px 0 4px; padding: 10px 14px; border: 1.5px dashed #d6cdbd; border-radius: 14px; background: transparent; text-align: left; }
+.together-btn b { font-family: var(--head); font-weight: 600; font-size: 1.05rem; display: block; }
+.together-btn small { display: block; font-size: 0.78rem; color: var(--soft); }
+.together-btn > span:nth-child(2) { flex: 1; }
+.together-go { font-size: 1.4rem; color: var(--soft); }
+.together-ic { position: relative; width: 34px; height: 24px; flex: none; }
+.together-ic i { position: absolute; top: 2px; width: 20px; height: 20px; border-radius: 50%; opacity: 0.85; }
+.together-ic i:first-child { left: 0; background: var(--ink1); }
+.together-ic i:last-child { right: 0; background: var(--ink2); mix-blend-mode: multiply; }
+.card h3 { font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--soft); margin: 16px 0 8px; }
+.tg-intro { font-size: 0.92rem; margin: 0 0 12px; }
+.tg-name { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; font-weight: 600; }
+.tg-name input, .tg-join input { flex: 1; min-width: 0; font: inherit; font-size: 1rem; font-weight: 500; padding: 0.55em 0.8em; border: 1.5px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); user-select: text; -webkit-user-select: text; }
+.tg-join input { text-transform: uppercase; letter-spacing: 0.3em; font-weight: 700; text-align: center; font-size: 1.2rem; }
+.tg-resume { width: 100%; margin-top: 14px; }
+.tg-levels { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tg-levels button { border: 1.5px solid var(--line); background: var(--paper); border-radius: 12px; padding: 9px 10px; text-align: left; font-weight: 600; }
+.tg-levels button small { display: block; font-weight: 500; font-size: 0.72rem; color: var(--soft); }
+.tg-levels button .dots { margin-left: 6px; font-size: 0.55rem; letter-spacing: 1px; color: var(--soft); vertical-align: middle; }
+.tg-join { display: flex; gap: 8px; }
+.tg-msg { min-height: 1.3em; font-size: 0.85rem; color: var(--soft); margin: 10px 0 4px; text-align: center; }
+.tg-close { width: 100%; }
+/* on the grid: whose numbers are whose, and where the other player is looking */
+.cell.ink1 { color: var(--ink1); }
+.cell.ink2 { color: var(--ink2); }
+.cell.their-sel::before { content: ''; position: absolute; inset: 2px; border: 2px dashed var(--their, var(--ink2)); border-radius: 3px; pointer-events: none; }
+.pair-who { display: inline-flex; gap: 10px; align-items: center; }
+.pair-who span { display: inline-flex; align-items: center; gap: 4px; }
+.pair-who i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; }
+.pair-who .away { opacity: 0.45; }
+.pair-code { font-weight: 700; letter-spacing: 0.12em; }
+.label-inks { display: flex; gap: 12px; margin: 2px 0 1px; font-weight: 500; font-size: 0.8rem; color: var(--soft); }
+.label-inks i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }

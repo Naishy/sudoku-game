@@ -2,7 +2,10 @@
 // score and the settings. All in localStorage under "gw.", kept small so an iPhone
 // install can carry it across (see carry.js).
 
-const K = { progress: 'gw.progress', works: 'gw.works', best: 'gw.best', settings: 'gw.settings', inducted: 'gw.inducted' };
+const K = {
+  progress: 'gw.progress', works: 'gw.works', best: 'gw.best', settings: 'gw.settings', inducted: 'gw.inducted',
+  pairs: 'gw.pairs', name: 'gw.name', pid: 'gw.pid', pairing: 'gw.pairing',
+};
 export const KEYS = K;
 
 const get = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
@@ -63,3 +66,44 @@ export function best() { return Number(get(K.best)) || 0; }
 export function saveBest(n) { set(K.best, String(n)); }
 export const inducted = () => get(K.inducted) === '1';
 export const markInducted = () => set(K.inducted, '1');
+
+// --- Together ---------------------------------------------------------------------------------
+// Works painted with someone else: "key.secs.hints.me.hands.name1.name2" (numbers in base 36,
+// hands packed three squares to a character, names URI-encoded). Kept apart from the solo
+// works: they never go to the board or count towards the best.
+const packHands = (h) => { let s = ''; for (let i = 0; i < 81; i += 3) s += (Number(h[i]) * 9 + Number(h[i + 1]) * 3 + Number(h[i + 2])).toString(36); return s; };
+const unpackHands = (s) => { let h = ''; for (const ch of s) { const n = parseInt(ch, 36); h += `${Math.floor(n / 9)}${Math.floor(n / 3) % 3}${n % 3}`; } return h; };
+export function encodePairWork(w) {
+  return [w.key, w.secs.toString(36), w.hints.toString(36), w.me, packHands(w.hands), encodeURIComponent(w.names[0]), encodeURIComponent(w.names[1])].join('.');
+}
+export function decodePairWork(s) {
+  const [key, secs, hints, me, hands, a, b] = String(s).split('.');
+  const w = { key, secs: parseInt(secs, 36), hints: parseInt(hints, 36), me: Number(me), hands: unpackHands(hands || ''), pair: true };
+  try { w.names = [decodeURIComponent(a ?? ''), decodeURIComponent(b ?? '')]; } catch { return null; }
+  if (!/^p[stcm]\d+$/.test(key || '') || !Number.isFinite(w.secs) || !Number.isFinite(w.hints) || w.hands.length !== 81 || ![1, 2].includes(w.me)) return null;
+  w.day = Number(key.slice(2));
+  return w;
+}
+export function pairWorks() { return (get(K.pairs) || '').split(',').filter(Boolean).map(decodePairWork).filter(Boolean); }
+export function addPairWork(w) {
+  const list = pairWorks().filter((x) => x.key !== w.key);
+  list.push(w);
+  set(K.pairs, list.map(encodePairWork).join(','));
+}
+/** Two lists of pair works together, one per puzzle (the first kept). */
+export function mergePairWorks(a, b) {
+  const by = new Map();
+  for (const w of [...a, ...b]) if (!by.has(w.key)) by.set(w.key, w);
+  return [...by.values()].sort((x, y) => x.day - y.day);
+}
+export const myName = () => get(K.name) || '';
+export const saveName = (n) => set(K.name, n);
+/** This phone's id in a room. */
+export function pairId() {
+  let id = get(K.pid);
+  if (!id) { id = `p${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`; set(K.pid, id); }
+  return id;
+}
+/** The Together grid this phone is part of, if it isn't finished: { code, key, at }. */
+export const pairing = () => json(K.pairing, null);
+export const savePairing = (p) => (p ? set(K.pairing, JSON.stringify(p)) : (() => { try { localStorage.removeItem(K.pairing); } catch { /* fine */ } })());

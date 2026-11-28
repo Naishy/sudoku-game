@@ -17,6 +17,11 @@
       "migrations_dir": "migrations"
     }
   ],
+  // Together: one Durable Object per room, holding a shared puzzle (src/pair-room.js)
+  "durable_objects": {
+    "bindings": [{ "name": "PAIRS", "class_name": "PairRoom" }]
+  },
+  "migrations": [{ "tag": "pair-rooms", "new_sqlite_classes": ["PairRoom"] }],
   // Cloudflare creates the DNS record and certificate for this automatically.
   "routes": [
     { "pattern": "gridworks.tequinox.net", "custom_domain": true }
