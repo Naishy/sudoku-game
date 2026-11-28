@@ -231,7 +231,9 @@ function save() {
 
 function select(i) {
   if (!G || G.done) return;
-  G.sel = G.sel === i && !G.values[i] ? -1 : i;
+  // tapping the chosen square again lets it go, except while Ziggy's showing you something
+  // (there, tapping it again is natural, and letting go would swallow the next number)
+  G.sel = G.sel === i && !G.values[i] && !G.tutorial ? -1 : i;
   G.digit = G.sel >= 0 ? G.values[G.sel] : 0;
   // tapped the square Ziggy's sitting in during a hint: he shifts over so you can see it
   const p = G.pending;
@@ -417,8 +419,8 @@ function render() {
     else if (S.mistakes && v && !G.givens[i] && v !== G.solution[i]) c.classList.add('wrong');
     if (hl.has(i)) c.classList.add('hl');
     if (glow.has(i)) c.classList.add('hl-cell', 'glow');
-    if (G.tutorial?.glows?.includes(i)) c.classList.add('hl-cell', 'glow');
-    if (G.tutorial?.hl?.includes(i)) c.classList.add('hl');
+    if (G.tutorial?.glows?.includes(i)) c.classList.add('hl-cell', 'glow', 'spot');
+    else if (G.tutorial?.hl?.includes(i)) c.classList.add('zone');
     // colours as you go: each number tints its square in the day's palette
     let bg = '';
     if (v && S.colours) bg = hexA(P[v - 1], (same ? 0.5 : G.givens[i] ? 0.2 : 0.3) + (peer ? 0.06 : 0));
@@ -1167,8 +1169,10 @@ function lessonSteps(t, ex, g, cand) {
       const base = new Set(proof.map(of));
       hl = [...Array(81).keys()].filter((i) => base.has(of(i)));
       const [lines, other] = rows ? ['rows', 'columns'] : ['columns', 'rows'];
+      const k = t === 'xWing' ? 'two' : 'three';
       next({ hl, digit: s.digit, text: `Look at the ${s.digit}s in the notes. In the shaded ${lines}, each ${s.digit} has just ${t === 'xWing' ? 'two' : 'two or three'} places to go.` });
-      next({ hl, glows: proof, digit: s.digit, text: `Those places (glowing) line up in the same ${proof.length === 4 ? 'two' : 'three'} ${other}. ${T.why}` });
+      next({ hl, glows: proof, digit: s.digit, text: `Those places (glowing) line up in the same ${k} ${other}.` });
+      next({ hl, glows: proof, digit: s.digit, text: `Whichever way round it falls, the ${lines} put a ${s.digit} in each of those ${k} ${other}. So the rest of those ${other} can't have a ${s.digit}.` });
     } else if (t === 'xyWing' || t === 'xyzWing') {
       const [p, w1, w2] = proof;
       const nd = (i) => andList(digitsOf(cand[i])).replace(/ and (\d)$/, ' or $1');
@@ -1194,7 +1198,9 @@ function lessonSteps(t, ex, g, cand) {
         look = `In ${u}, the ${andList(digitsOf(keep))} can only go in the glowing squares.`;
       }
       next({ hl, glows: proof, digit: s.digit ?? 0, text: look });
-      next({ hl, glows: proof, digit: s.digit ?? 0, text: T.why });
+      // why, kept short enough for Ziggy's bubble (the page has the full story)
+      const WHY = { nakedQuad: 'Those four numbers fill those four squares, so the rest of the line or box can\'t have them.' };
+      next({ hl, glows: proof, digit: s.digit ?? 0, text: WHY[t] || T.why });
     }
     const where = elims.map(([i]) => i);
     const one = where.length === 1;
@@ -1223,15 +1229,22 @@ function startLesson(t) {
   const elimMasks = new Map(ex.step.elim || []);
   const lesson = {
     givens, solution, notes: cand, step: 0, steps, lesson: t, title: L.TEACH[t].name, sub: 'Ziggy shows you',
+    // the squares the lesson is about: Ziggy never sits on these
+    keepClear: [...(ex.step.cells || []), ...(ex.step.elim || []).map(([i]) => i), ...(ex.step.place ? [ex.step.place[0]] : [])],
     // gentle nudges: only the move the lesson is about
     nudge(e, i, d, step) {
+      const takeBack = () => setTimeout(() => {
+        if (G?.tutorial !== lesson) return;
+        const u = G.undo.pop();
+        if (u) { G.values = u.v; G.notes = u.n; G.digit = 0; render(); }
+      }, 600);
       if (e === 'place' && placeAt >= 0 && !(i === placeAt && d === ex.step.place[1])) {
-        setTimeout(() => { if (G?.tutorial === lesson) { G.values[i] = givens[i]; render(); } }, 600);
+        takeBack();
         say('ziggy', i === placeAt ? `Nearly! ${step.text}` : 'Not that one: the glowing square.', { coach: true });
         return true;
       }
       if (e === 'place' && placeAt < 0) {
-        setTimeout(() => { if (G?.tutorial === lesson) { G.values[i] = 0; G.notes[i] = cand[i]; render(); } }, 600);
+        takeBack();
         say('ziggy', 'Turn on Notes first: this time you\'re taking a note out, not putting a number in.', { coach: true });
         return true;
       }
@@ -1298,7 +1311,7 @@ function coachStep(n) {
   if (s.glows || s.hl) G.sel = -1;
   // Ziggy sits beside what to look at, never on it
   const region = t.glows.length ? t.glows : t.hl;
-  t.seat = region.length ? seatNear(G.values, G.notes, region, new Set([...t.glows, ...t.hl]), region[0]) : -1;
+  t.seat = region.length ? seatNear(G.values, G.notes, region, new Set([...t.glows, ...t.hl, ...(t.keepClear || [])]), region[0]) : -1;
   render();
   fitGrid();
 }
