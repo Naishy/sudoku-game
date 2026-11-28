@@ -43,33 +43,34 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .icon-btn { border: 0; background: none; font-size: 1.7rem; width: 44px; height: 44px; line-height: 1; border-radius: 50%; color: var(--ink); }
 
 /* --- today ---------------------------------------------------------------------------- */
-.poster { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 8px 2px 18px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+.poster { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 4px 2px 12px; border-bottom: 1px solid var(--line); margin-bottom: 12px; flex: none; }
 .eyebrow { font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--soft); font-weight: 600; }
-.logo { font-family: var(--head); font-weight: 600; font-size: 2.6rem; line-height: 1; margin: 0.12em 0 0.18em; letter-spacing: -0.01em; }
+.logo { font-family: var(--head); font-weight: 600; font-size: 2.35rem; line-height: 1; margin: 0.1em 0 0.12em; letter-spacing: -0.01em; }
 .by { font-family: var(--head); font-style: italic; font-size: 1.15rem; color: var(--emerald); }
-.palette-line { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.8rem; color: var(--soft); }
+.palette-line { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.8rem; color: var(--soft); }
 .swatches { display: inline-flex; }
 .swatches { box-shadow: 0 0 0 1px var(--line); }
 .swatches i { width: 12px; height: 12px; display: inline-block; }
-.portrait { width: 96px; height: 96px; border-radius: 50%; background: #e8e2d6; flex: none; }
+.portrait { width: 84px; height: 84px; border-radius: 50%; background: #e8e2d6; flex: none; }
 
-.levels { display: flex; flex-direction: column; gap: 10px; }
-.level { display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; text-align: left; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px 10px 10px; }
+.levels { display: flex; flex-direction: column; gap: 8px; flex: none; }
+.level { display: grid; grid-template-columns: 50px 1fr auto; gap: 13px; align-items: center; text-align: left; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 8px 14px 8px 9px; }
 .level:active { background: #faf7f1; }
-.level .thumb { width: 64px; height: 64px; border-radius: 4px; box-shadow: 0 0 0 3px #fff, 0 0 0 4px #d8d1c4, 0 4px 10px rgba(40, 30, 20, 0.12); background: #f1ece3; display: block; }
+.level .thumb { width: 50px; height: 50px; border-radius: 4px; box-shadow: 0 0 0 3px #fff, 0 0 0 4px #d8d1c4, 0 4px 10px rgba(40, 30, 20, 0.12); background: #f1ece3; display: block; }
 .level .thumb.blank { background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: calc(100% / 3) calc(100% / 3); }
 .level .name { font-family: var(--head); font-weight: 600; font-size: 1.25rem; display: flex; align-items: baseline; gap: 8px; }
 .level .dots { font-family: var(--font); font-size: 0.7rem; letter-spacing: 2px; color: var(--soft); }
-.level .blurb { font-size: 0.82rem; color: var(--soft); margin-top: 2px; line-height: 1.3; }
+.level .blurb { font-size: 0.82rem; color: var(--soft); margin-top: 1px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.level > div { min-width: 0; }
 .level .status { font-size: 0.82rem; font-weight: 600; text-align: right; white-space: nowrap; color: var(--soft); }
 .level .status.done { color: var(--mine); }
 .level .status small { display: block; font-weight: 500; color: var(--soft); }
 /* Ziggy's patch of floor on today's page, with the day's note between the two places he
    likes to sit: he wanders from one to the other and purrs when tapped */
-.home-cat { position: relative; height: 84px; margin: 8px 0 6px; flex: none; }
+.home-cat { position: relative; height: 78px; margin: 6px 0 2px; flex: none; }
 .home-ziggy { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: manipulation; }
 .home-note { position: absolute; left: 27%; right: 27%; top: 50%; transform: translateY(-50%); margin: 0; pointer-events: none; text-align: center; font-family: var(--head); font-style: italic; color: var(--soft); font-size: 0.92rem; line-height: 1.3; }
-.home-buttons { display: flex; gap: 10px; justify-content: center; margin: 6px 0 14px; }
+.home-buttons { display: flex; gap: 8px; justify-content: center; margin: 4px 0 10px; flex: none; }
 .family-slot { margin-top: auto; }
 
 /* --- playing ---------------------------------------------------------------------------- */
@@ -220,13 +221,8 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 
 /* --- Together ------------------------------------------------------------------------------ */
 :root { --ink1: #1d6b5f; --ink2: #9b3d5a; } /* the two players' inks (INKS in pair.js) */
-.together-btn { display: flex; align-items: center; gap: 12px; width: 100%; margin: 10px 0 4px; padding: 10px 14px; border: 1.5px dashed #d6cdbd; border-radius: 14px; background: transparent; text-align: left; }
-.together-btn b { font-family: var(--head); font-weight: 600; font-size: 1.05rem; display: block; }
-.together-btn small { display: block; font-size: 0.78rem; color: var(--soft); }
-.together-btn > span:nth-child(2) { flex: 1; }
-.together-go { font-size: 1.4rem; color: var(--soft); }
-.together-ic { position: relative; width: 34px; height: 24px; flex: none; }
-.together-ic i { position: absolute; top: 2px; width: 20px; height: 20px; border-radius: 50%; opacity: 0.85; }
+.together-ic { position: relative; display: block; width: 24px; height: 16px; flex: none; }
+.together-ic i { position: absolute; top: 0; width: 16px; height: 16px; border-radius: 50%; opacity: 0.85; }
 .together-ic i:first-child { left: 0; background: var(--ink1); }
 .together-ic i:last-child { right: 0; background: var(--ink2); mix-blend-mode: multiply; }
 .card h3 { font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--soft); margin: 16px 0 8px; }
@@ -291,3 +287,49 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 /* Ziggy's coaching (the guide, Show me) says more than a hint: a taller bubble, and the grid makes room */
 .say.coach { height: 118px; }
 @media (max-height: 700px) { .say.coach { height: 112px; } }
+/* Together's QR code */
+.qr-card { text-align: center; }
+.qr-how { margin: 0 0 12px; font-size: 0.95rem; }
+.qr-canvas { display: block; margin: 0 auto; background: #fff; border-radius: 10px; box-shadow: 0 0 0 1px var(--line); }
+.qr-or { margin: 14px 0 2px; font-size: 0.82rem; color: var(--soft); }
+.qr-code { font-weight: 700; font-size: 1.7rem; letter-spacing: 0.3em; margin: 0 0 14px 0.3em; }
+.qr-card .btn { width: 100%; }
+button.pair-code { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: inherit; letter-spacing: 0.12em; text-decoration: underline dotted; }
+/* Together, as a round button beside Settings; a dot when a grid with someone is waiting */
+.together-icon { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+.together-icon.waiting::after { content: ''; position: absolute; top: 3px; right: 3px; width: 9px; height: 9px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px var(--bg); }
+@media (max-height: 580px) {
+  .palette-line { display: none; }
+  .level .blurb { display: none; }
+  .home-cat { height: 56px; }
+}
+.home-buttons .btn { white-space: nowrap; padding: 0.6em 1.05em; }
+.home-buttons .btn.icon { width: 44px; height: 44px; padding: 0; flex: none; display: inline-flex; align-items: center; justify-content: center; }
+@media (max-width: 359px) { .home-buttons { gap: 6px; } .home-buttons .btn { padding: 0.6em 0.8em; font-size: 0.92rem; } }
+/* narrow phones (320px): the header on fewer lines, and room for the level's dots */
+@media (max-width: 359px) {
+  .eyebrow { letter-spacing: 0.1em; font-size: 0.66rem; }
+  .logo { font-size: 1.85rem; white-space: nowrap; }
+  .portrait { width: 64px; height: 64px; }
+  .swatches i { width: 9px; height: 10px; }
+  .palette-line { font-size: 0.74rem; }
+  .level { gap: 10px; padding-right: 10px; }
+  .level .name { font-size: 1.08rem; gap: 6px; }
+  .level .dots { font-size: 0.55rem; letter-spacing: 1px; }
+}
+
+/* --- today's page scales with the screen --------------------------------------------------
+   Sizes follow the screen's height (dvh), between a floor for small phones and a ceiling for
+   big ones: the header, the level cards (which stretch to share the room) and Ziggy's patch.
+   main.js sets --thumb, the size the cards' paintings are drawn at. On the smallest phones a
+   few extras go (see max-height: 580px above). */
+#home .poster { padding: clamp(2px, 0.8dvh, 10px) 2px clamp(8px, 1.6dvh, 18px); margin-bottom: clamp(8px, 1.6dvh, 16px); }
+#home .logo { font-size: clamp(1.85rem, 5.2dvh, 2.9rem); }
+#home .portrait { width: clamp(62px, 12.5dvh, 116px); height: clamp(62px, 12.5dvh, 116px); }
+#home .levels { flex: 1 1 auto; gap: clamp(6px, 1.2dvh, 12px); max-height: 520px; }
+#home .level { flex: 1 1 0; min-height: 0; max-height: 116px; padding: clamp(5px, 1dvh, 12px) 14px clamp(5px, 1dvh, 12px) 9px; grid-template-columns: var(--thumb, 50px) 1fr auto; }
+#home .level .thumb { width: var(--thumb, 50px); height: var(--thumb, 50px); }
+#home .level .name { font-size: clamp(1.08rem, 2.7dvh, 1.45rem); }
+#home .level .blurb { font-size: clamp(0.78rem, 1.65dvh, 0.98rem); }
+#home .home-cat { height: auto; flex: 0 1 clamp(54px, 11dvh, 120px); min-height: 52px; margin: clamp(2px, 0.8dvh, 10px) 0 0; }
+#home .home-note { font-size: clamp(0.85rem, 1.8dvh, 1.05rem); }
