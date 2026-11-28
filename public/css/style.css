@@ -281,3 +281,7 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .mini .n .gone { color: var(--clash); text-decoration: line-through; text-decoration-thickness: 1.5px; }
 .say-learn { margin-left: 6px; padding: 0; font-size: 0.82em; color: var(--emerald); white-space: nowrap; }
 .how-link { font: inherit; font-weight: 700; color: var(--emerald); padding: 0; text-decoration: underline; }
+/* Show me: Ziggy's lesson */
+.tech .show-me { display: block; margin: 12px auto 0; }
+#learn.no-lessons .show-me { display: none; }
+.coach-next { display: inline-block; float: right; margin: 4px 0 0 10px; border: 0; border-radius: 999px; padding: 0.45em 1.1em; background: var(--paper); color: var(--ink); font-weight: 700; font-size: 0.85em; }

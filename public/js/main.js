@@ -205,9 +205,11 @@ function openPuzzle(key, { daily, day, palette, tutorial = null }) {
   };
   if (p?.v) { const v = parse(p.v); for (let i = 0; i < 81; i++) if (!givens[i] && v[i]) G.values[i] = v[i]; }
   if (p?.n) G.notes = store.decodeNotes(p.n);
+  if (tutorial?.notes) G.notes = Int16Array.from(tutorial.notes);
   const info = LEVEL_INFO[G.level];
-  $('play-level').textContent = tutorial ? 'Your first grid' : info.name;
-  $('play-sub').textContent = tutorial ? 'A quick guide' : `Today's ${info.name.toLowerCase()} · ${PALETTES[G.palette].name}`;
+  $('play-level').textContent = tutorial ? tutorial.title || 'Your first grid' : info.name;
+  $('play-sub').textContent = tutorial ? tutorial.sub || 'A quick guide' : `Today's ${info.name.toLowerCase()} · ${PALETTES[G.palette].name}`;
+  $('coach-skip').textContent = tutorial?.lesson ? 'Back to Techniques' : 'Skip the guide';
   say(null);
   $('coach-skip').classList.toggle('hidden', !tutorial);
   $('timer').classList.toggle('hidden', !!tutorial);
@@ -268,7 +270,7 @@ function input(d) {
     sound.note(); haptics.note();
     G.digit = d;
     afterChange();
-    coachEvent('note', i);
+    coachEvent('note', i, d);
     return;
   }
   pushUndo();
@@ -300,6 +302,7 @@ function erase() {
   G.digit = 0;
   sound.erase(); haptics.tap();
   afterChange();
+  coachEvent('erase', i);
 }
 
 function undo() {
@@ -331,6 +334,7 @@ function afterChange() {
 // --- Ziggy's hints ----------------------------------------------------------------------------
 function hint() {
   if (!G || G.done) return;
+  if (G.tutorial?.lesson) { coachStep(G.tutorial.step); return; }
   if (G.pair) { haptics.hint(); pairSend({ t: 'hint' }); return; }
   sound.hint(); haptics.hint();
   const p = G.pending;
@@ -413,7 +417,8 @@ function render() {
     else if (S.mistakes && v && !G.givens[i] && v !== G.solution[i]) c.classList.add('wrong');
     if (hl.has(i)) c.classList.add('hl');
     if (glow.has(i)) c.classList.add('hl-cell', 'glow');
-    if (G.tutorial?.glow === i) c.classList.add('hl-cell', 'glow');
+    if (G.tutorial?.glows?.includes(i)) c.classList.add('hl-cell', 'glow');
+    if (G.tutorial?.hl?.includes(i)) c.classList.add('hl');
     // colours as you go: each number tints its square in the day's palette
     let bg = '';
     if (v && S.colours) bg = hexA(P[v - 1], (same ? 0.5 : G.givens[i] ? 0.2 : 0.3) + (peer ? 0.06 : 0));
@@ -512,7 +517,7 @@ window.addEventListener('resize', fitGrid);
 const sayFaceSize = () => (innerHeight <= 700 ? 76 : 86);
 // Ziggy's words show on their own: she's on the grid (never a second Ziggy by the bubble)
 let sayCount = 0; // goes up with every new line, so Ziggy only takes her own words with her
-function say(who, text, { coach = false, learn = null } = {}) {
+function say(who, text, { coach = false, learn = null, next = null } = {}) {
   sayCount++;
   const box = $('say');
   box.classList.toggle('coach', coach);
@@ -524,6 +529,11 @@ function say(who, text, { coach = false, learn = null } = {}) {
     // a hint: how the method works, on the Techniques page
     const b = el('button', 'link say-learn', 'How does this work?');
     b.onclick = () => openLearn(learn, 'play');
+    $('say-text').append(b);
+  }
+  if (next) {
+    const b = el('button', 'coach-next', next);
+    b.onclick = (e) => { e.stopPropagation(); sound.tap(); coachEvent('next'); };
     $('say-text').append(b);
   }
   box.classList.add('on');
@@ -557,6 +567,7 @@ $('timer').onclick = () => { S.timer = !S.timer; store.saveSettings(S); tick(); 
 
 // --- finishing -----------------------------------------------------------------------------------
 function checkDone() {
+  if (G.tutorial?.lesson) return; // a lesson ends with Ziggy, not a painting
   if (!G.values.every((v) => v)) return;
   if (G.values.some((v, i) => v !== G.solution[i])) { say('ziggy', L.FULL_BUT_WRONG); return; }
   G.done = true;
@@ -1021,6 +1032,9 @@ function techCard(t) {
   if (ex) {
     const { grid, cap } = miniGrid(t, ex);
     card.append(grid, el('p', 'example', cap));
+    const b = el('button', 'btn big show-me', 'Show me');
+    b.onclick = () => startLesson(t);
+    card.append(b);
   }
   return card;
 }
@@ -1092,6 +1106,7 @@ function openLearn(tech, from) {
   if (!learnBuilt) buildLearn();
   learnFrom = from;
   sound.tap();
+  $('learn').classList.toggle('no-lessons', !!G?.pair);
   show('learn');
   const scroller = $('learn');
   if (tech) {
@@ -1102,8 +1117,151 @@ function openLearn(tech, from) {
   tel.log('learn', { from, tech });
 }
 $('learn-back').onclick = () => {
-  if (learnFrom === 'play' && G) { show('play'); render(); fitGrid(); } else show('home');
+  if (learnFrom === 'play' && G) {
+    // back to the puzzle you were on (after a lesson, its own title again)
+    if (!G.tutorial) {
+      const info = LEVEL_INFO[G.level];
+      $('play-level').textContent = G.pair ? `${info.name}, together` : info.name;
+      if (G.pair) pairTitle(); else $('play-sub').textContent = `Today's ${info.name.toLowerCase()} · ${PALETTES[G.palette].name}`;
+      $('coach-skip').classList.add('hidden');
+      $('timer').classList.remove('hidden');
+    }
+    show('play'); render(); fitGrid();
+  } else show('home');
 };
+
+// --- Show me: Ziggy walks you through a technique -----------------------------------------
+// The worked example opens as a real grid, and Ziggy takes you through it a step at a time
+// (the guide's coaching, with steps made for the technique), ending with you making the move.
+const lineWords = (cells) => (cells.every((i) => rowOf(i) === rowOf(cells[0])) ? `row ${rowOf(cells[0]) + 1}` : `column ${colOf(cells[0]) + 1}`);
+const andList = (xs) => (xs.length < 2 ? String(xs[0]) : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+const peersAndSelf = (i) => [...PEERS[i], i];
+
+function lessonSteps(t, ex, g, cand) {
+  const s = ex.step;
+  const T = L.TEACH[t];
+  // "a pair", "an X-Wing": as Ziggy's hints say it
+  const what = { hiddenSingle: 'a number with only one place to go', nakedSingle: 'a square where only one number fits' }[t] || L.PHRASE[t];
+  const steps = [];
+  const next = (o) => steps.push({ next: 'Next', done: (e) => e === 'next', ...o });
+  next({ text: `Ziggy's found ${what} in this grid. She'll show you how it works.` });
+  if (s.place) {
+    const [target, d] = s.place;
+    if (t === 'hiddenSingle') {
+      next({ hl: UNITS[s.unit], digit: d, text: `Look at ${L.unitWords(s.unit)}: it still needs a ${d}. The ${d}s already on the grid are highlighted.` });
+      next({ hl: UNITS[s.unit], glows: [target], digit: d, text: `Each ${d} rules out its own row, column and box. In ${L.unitWords(s.unit)}, that leaves just one square.` });
+    } else {
+      next({ hl: PEERS[target], glows: [target], text: 'Look at the glowing square. Its row, column and box are shaded.' });
+      next({ hl: PEERS[target], glows: [target], text: `Between them, they already have every number except ${d}. So it can only be ${d}.` });
+    }
+    steps.push({ glows: [target], digit: 0, text: `Your turn: tap the glowing square, then ${d}.`, done: (e, i, x) => e === 'place' && i === target && x === d });
+  } else {
+    const proof = s.cells;
+    const elims = s.elim;
+    const gone = [...new Set(elims.flatMap(([, m]) => digitsOf(m)))];
+    let hl = s.unit != null ? UNITS[s.unit] : [];
+    if (t === 'xWing' || t === 'swordfish') {
+      const cols = new Set(proof.map(colOf));
+      const rows = elims.every(([i]) => cols.has(colOf(i)));
+      const of = rows ? rowOf : colOf;
+      const base = new Set(proof.map(of));
+      hl = [...Array(81).keys()].filter((i) => base.has(of(i)));
+      const [lines, other] = rows ? ['rows', 'columns'] : ['columns', 'rows'];
+      next({ hl, digit: s.digit, text: `Look at the ${s.digit}s in the notes. In the shaded ${lines}, each ${s.digit} has just ${t === 'xWing' ? 'two' : 'two or three'} places to go.` });
+      next({ hl, glows: proof, digit: s.digit, text: `Those places (glowing) line up in the same ${proof.length === 4 ? 'two' : 'three'} ${other}. ${T.why}` });
+    } else if (t === 'xyWing' || t === 'xyzWing') {
+      const [p, w1, w2] = proof;
+      const nd = (i) => andList(digitsOf(cand[i])).replace(/ and (\d)$/, ' or $1');
+      const z = s.digit;
+      next({ glows: [p], text: `This square is the pivot: it can only be ${nd(p)}.` });
+      next({ glows: [w1, w2], text: `It sees two wings: one can be ${nd(w1)}, the other ${nd(w2)}. Both wings could be ${z}.` });
+      if (t === 'xyWing') {
+        const [x, y] = digitsOf(cand[p]);
+        const [wx, wy] = cand[w1] & bit(x) ? [w1, w2] : [w2, w1];
+        const other = (w) => digitsOf(cand[w]).find((d) => d !== z);
+        next({ glows: proof, digit: z, text: `If the pivot is ${x}, the ${nd(wx)} wing can't be ${other(wx)}, so it's ${z}. If the pivot is ${y}, the other wing is ${z}. Either way one wing is ${z}, so a square that sees both wings can't be ${z}.` });
+      } else next({ glows: proof, digit: z, text: `Whatever the pivot turns out to be, one of these three squares is ${z}. So a square that sees all three can't be ${z}.` });
+    } else {
+      let look;
+      const u = s.unit != null ? L.unitWords(s.unit) : '';
+      if (t === 'pointing') look = `In ${u}, the ${s.digit} can only go in the glowing squares, and they're all in ${lineWords(proof)}.`;
+      else if (t === 'claiming') look = `In ${u}, the ${s.digit} can only go in the glowing squares, and they're all in the same box.`;
+      else if (t.startsWith('naked')) look = `In ${u}, the glowing squares have only ${andList(digitsOf(proof.reduce((m, i) => m | cand[i], 0)))} in their notes, between them.`;
+      else {
+        let keep = 0;
+        const em = new Map(elims);
+        for (const i of proof) keep |= cand[i] & ~(em.get(i) || 0);
+        look = `In ${u}, the ${andList(digitsOf(keep))} can only go in the glowing squares.`;
+      }
+      next({ hl, glows: proof, digit: s.digit ?? 0, text: look });
+      next({ hl, glows: proof, digit: s.digit ?? 0, text: T.why });
+    }
+    const where = elims.map(([i]) => i);
+    const one = where.length === 1;
+    steps.push({
+      glows: where, digit: 0, glowTool: G?.notesMode ? null : 't-notes',
+      text: `Your turn: the ${andList(gone)} can't go in ${one ? 'the glowing square' : 'the glowing squares'}. Turn on Notes, tap ${one ? 'it' : 'each one'}, then tap ${andList(gone)} to take ${gone.length > 1 || !one ? 'them' : 'it'} out.`,
+      done: () => elims.every(([i, m]) => !(G.notes[i] & m)),
+    });
+  }
+  steps.push({ next: 'Back to Techniques', done: (e) => e === 'next', text: s.place ? `That's it: ${what}. Lovely!` : `That's ${what}: one less note to worry about. Lovely!` });
+  return steps;
+}
+
+let lessonReturn = null; // what to go back to after a lesson: { G, from }
+function startLesson(t) {
+  const ex = EXAMPLES[t];
+  if (!ex) return;
+  if (G && !G.done && !G.tutorial) save();
+  lessonReturn = { G, from: learnFrom };
+  const givens = parse(ex.grid);
+  const cand = store.decodeNotes(ex.notes);
+  const solution = solve(givens);
+  const steps = lessonSteps(t, ex, givens, cand);
+  const { palette, day } = today();
+  const placeAt = ex.step.place?.[0] ?? -1;
+  const elimMasks = new Map(ex.step.elim || []);
+  const lesson = {
+    givens, solution, notes: cand, step: 0, steps, lesson: t, title: L.TEACH[t].name, sub: 'Ziggy shows you',
+    // gentle nudges: only the move the lesson is about
+    nudge(e, i, d, step) {
+      if (e === 'place' && placeAt >= 0 && !(i === placeAt && d === ex.step.place[1])) {
+        setTimeout(() => { if (G?.tutorial === lesson) { G.values[i] = givens[i]; render(); } }, 600);
+        say('ziggy', i === placeAt ? `Nearly! ${step.text}` : 'Not that one: the glowing square.', { coach: true });
+        return true;
+      }
+      if (e === 'place' && placeAt < 0) {
+        setTimeout(() => { if (G?.tutorial === lesson) { G.values[i] = 0; G.notes[i] = cand[i]; render(); } }, 600);
+        say('ziggy', 'Turn on Notes first: this time you\'re taking a note out, not putting a number in.', { coach: true });
+        return true;
+      }
+      if (e === 'erase') {
+        const u = G.undo.pop();
+        if (u) { G.values = u.v; G.notes = u.n; render(); }
+        say('ziggy', `Erase clears every note in a square. ${step.text}`, { coach: true });
+        return true;
+      }
+      if (e === 'note' && d && !(elimMasks.has(i) && elimMasks.get(i) & bit(d) && !(G.notes[i] & bit(d)))) {
+        G.notes[i] ^= bit(d); // put it back
+        render();
+        say('ziggy', `Not that one. ${step.text}`, { coach: true });
+        return true;
+      }
+      return false;
+    },
+  };
+  openPuzzle('lesson', { daily: false, day, palette, tutorial: lesson });
+  tel.log('lesson', { tech: t });
+}
+
+function endLesson(early = false) {
+  const t = G?.tutorial?.lesson;
+  tel.log('lesson', { tech: t, step: early ? G?.tutorial?.step : 'done' });
+  const back = lessonReturn;
+  lessonReturn = null;
+  G = back?.G || null;
+  openLearn(t, back?.from || 'home');
+}
 
 // --- the guide (first go) ---------------------------------------------------------------------------
 // A nearly finished grid: one square to find, notes to try, a hint from Ziggy, then the rest.
@@ -1129,25 +1287,37 @@ function startTutorial() {
 function coachStep(n) {
   const t = G.tutorial;
   t.step = n;
-  const s = STEPS[n];
+  const s = (t.steps || STEPS)[n];
   // Ziggy shows you round
-  say('ziggy', s.keep ? `${$('say-text').textContent} ${s.text}` : s.text, { coach: !s.keep });
+  say('ziggy', s.keep ? `${$('say-text').textContent} ${s.text}` : s.text, { coach: !s.keep, next: s.next });
   t.glow = s.glow ?? -1;
+  t.glows = s.glows || (t.glow >= 0 ? [t.glow] : []);
+  t.hl = s.hl || [];
   t.glowTool = s.glowTool || null;
-  t.seat = t.glow >= 0 ? seatNear(G.values, G.notes, [t.glow], new Set([t.glow])) : -1;
+  if (s.digit != null) G.digit = s.digit;
+  if (s.glows || s.hl) G.sel = -1;
+  // Ziggy sits beside what to look at, never on it
+  const region = t.glows.length ? t.glows : t.hl;
+  t.seat = region.length ? seatNear(G.values, G.notes, region, new Set([...t.glows, ...t.hl]), region[0]) : -1;
   render();
   fitGrid();
 }
 function coachEvent(e, a, b) {
   const t = G?.tutorial;
-  if (!t || t.step >= STEPS.length) return;
-  const s = STEPS[t.step];
-  if (t.step === 1 && e === 'place' && a === 2 && b !== 4) {
+  const steps = t?.steps || STEPS;
+  if (!t || t.step >= steps.length) return;
+  const s = steps[t.step];
+  if (t.nudge?.(e, a, b, s)) return;
+  if (!t.steps && t.step === 1 && e === 'place' && a === 2 && b !== 4) {
     say('ziggy', 'Nearly! Look along the row for the number that isn\'t there yet.', { coach: true });
     setTimeout(() => { if (G?.tutorial && G.values[2] !== 4) { G.values[2] = 0; render(); } }, 700);
     return;
   }
-  if (s.done(e, a, b)) { tel.log('guide', { step: t.step }); if (t.step + 1 < STEPS.length) coachStep(t.step + 1); }
+  if (s.done(e, a, b)) {
+    if (t.lesson) { if (t.step + 1 < steps.length) coachStep(t.step + 1); else endLesson(); return; }
+    tel.log('guide', { step: t.step });
+    if (t.step + 1 < STEPS.length) coachStep(t.step + 1);
+  }
 }
 function finishTutorial() {
   store.markInducted();
@@ -1177,11 +1347,14 @@ function finishTutorial() {
   };
   requestAnimationFrame(step);
 }
-$('coach-skip').onclick = () => { store.markInducted(); tel.log('guide', { step: 'skip', at: G?.tutorial?.step }); G = null; show('home'); };
+$('coach-skip').onclick = () => {
+  if (G?.tutorial?.lesson) { endLesson(true); return; }
+  store.markInducted(); tel.log('guide', { step: 'skip', at: G?.tutorial?.step }); G = null; show('home'); };
 $('fin-home').onclick = () => { G = null; show('home'); };
 
 // --- buttons, menus, settings -------------------------------------------------------------------
 $('btn-back').onclick = () => {
+  if (G?.tutorial?.lesson) { endLesson(true); return; }
   if (G?.pair) { leavePair(); show('home'); return; }
   if (G && !G.done && !G.tutorial) { save(); tel.log('leave', { key: G.key, secs: G.secs, filled: G.values.filter((v, i) => v && !G.givens[i]).length }); }
   if (G?.tutorial) store.markInducted();

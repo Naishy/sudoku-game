@@ -15,7 +15,7 @@ const pick = (xs) => xs[Math.floor(Math.random() * xs.length)];
 
 // what each harder technique means, in a sentence
 // how each technique is named in a sentence
-const PHRASE = {
+export const PHRASE = {
   pointing: 'a pointing pair', claiming: 'a box-and-line', nakedPair: 'a pair', hiddenPair: 'a hidden pair',
   nakedTriple: 'a triple', hiddenTriple: 'a hidden triple', xWing: 'an X-Wing', nakedQuad: 'a quad', hiddenQuad: 'a hidden quad',
   xyWing: 'an XY-Wing', swordfish: 'a swordfish', xyzWing: 'an XYZ-Wing',
