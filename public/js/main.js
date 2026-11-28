@@ -113,7 +113,9 @@ function renderHome() {
     holder.append(b);
   }
   $('home-note').textContent = L.homeNote(doneToday, LEVELS.length);
-  const pr = store.pairing();
+  let pr = store.pairing();
+  if (pr && !Number.isFinite(pr.at)) store.savePairing(pr); // from before grids had a date: start its two days now
+  if (store.stalePairing(pr)) { tel.log('pair-forget', { key: pr.key }); store.savePairing(null); pr = null; }
   // Ziggy fits his patch of floor (smaller on a short phone)
   homeCat.size = Math.max(44, Math.min(96, $('home-ziggy').offsetHeight - 8));
   // a Together grid not finished yet: a dot on the button (the card says who it's with)
@@ -779,9 +781,27 @@ function openTogether(msg = '') {
   const pr = store.pairing();
   const resume = $('tg-resume');
   resume.classList.toggle('hidden', !pr);
+  const end = $('tg-end');
+  end.classList.toggle('hidden', !pr);
+  end.classList.remove('sure');
+  end.textContent = 'End this grid';
   if (pr) {
     resume.textContent = `Back to your grid with ${pr.partner || 'your partner'}`;
     resume.onclick = () => connectPair({ code: pr.code });
+    // two taps, so it can't go by accident
+    end.onclick = () => {
+      sound.tap();
+      if (!end.classList.contains('sure')) {
+        end.classList.add('sure');
+        end.textContent = pr.partner ? `Tap again to end it (${pr.partner} can still finish it)` : 'Tap again to end it';
+        return;
+      }
+      endPairing(pr);
+      resume.classList.add('hidden');
+      end.classList.add('hidden');
+      $('tg-msg').textContent = 'Ended. Start a new grid, or join one.';
+      renderHome();
+    };
   }
   const holder = $('tg-levels');
   holder.innerHTML = '';
@@ -848,6 +868,14 @@ function connectPair({ code, key = null, create = false, tries = 0 }) {
   tel.log(create ? 'pair-create' : 'pair-join', create ? { key } : {});
 }
 
+/** This phone is done with its Together grid: it's forgotten here (the other phone can carry on). */
+function endPairing(pr = store.pairing()) {
+  if (link) { link.close(); link = null; }
+  store.savePairing(null);
+  refreshInstallAddress();
+  tel.log('pair-end', { key: pr?.key, partner: !!pr?.partner, playing: !!G?.pair, filled: G?.pair ? G.values.filter((v, i) => v && !G.givens[i]).length : null });
+}
+
 function leavePair() {
   if (link) { link.close(); link = null; }
   if (G?.pair) {
@@ -865,6 +893,7 @@ function openPair(l, v) {
     pair: { link: l, code: l.code, seat: l.seat, players: [], theirSel: -1, status: 'open', pendingId: null, lastKey: null, partner: null },
   };
   $('play-level').textContent = `${LEVEL_INFO[v.level].name}, together`;
+  store.savePairing({ code: l.code, key: v.key, partner: store.pairing()?.code === l.code ? store.pairing().partner : null }); // its two days start again
   say(null);
   $('coach-skip').classList.add('hidden');
   $('timer').classList.remove('hidden');
@@ -1439,7 +1468,28 @@ $('btn-back').onclick = () => {
   G = null;
   show('home');
 };
-$('btn-menu').onclick = () => $('menu').classList.remove('hidden');
+$('btn-menu').onclick = () => {
+  const leave = $('m-leave');
+  leave.classList.toggle('hidden', !(G?.pair && !G.done));
+  leave.classList.remove('sure');
+  leave.textContent = 'Leave this grid';
+  $('menu').classList.remove('hidden');
+};
+$('m-leave').onclick = () => {
+  const leave = $('m-leave');
+  if (!G?.pair) return;
+  sound.tap();
+  if (!leave.classList.contains('sure')) {
+    leave.classList.add('sure');
+    const p = G.pair.partner;
+    leave.textContent = p ? `Tap again to leave for good (${p} can still finish it)` : 'Tap again to leave for good';
+    return;
+  }
+  $('menu').classList.add('hidden');
+  endPairing();
+  G = null;
+  show('home');
+};
 $('m-close').onclick = () => $('menu').classList.add('hidden');
 $('m-notes').onclick = () => {
   $('menu').classList.add('hidden');
