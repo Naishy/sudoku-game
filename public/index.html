@@ -183,6 +183,18 @@
       </div>
     </div>
 
+    <!-- Together: the code as a QR code, for the other phone's camera -->
+    <div id="pair-qr" class="modal hidden">
+      <div class="card qr-card">
+        <h2>Scan to join</h2>
+        <p class="qr-how">On the other phone, open the camera and point it here.</p>
+        <canvas id="qr-canvas" class="qr-canvas" aria-label="QR code to join this grid"></canvas>
+        <p class="qr-or">Or, on the other phone: Together, then join with the code</p>
+        <div id="qr-code" class="qr-code"></div>
+        <button id="qr-close" class="btn big">Start the grid</button>
+      </div>
+    </div>
+
     <div id="settings" class="modal hidden">
       <div class="card">
         <h2>Settings</h2>

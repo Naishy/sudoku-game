@@ -16,6 +16,7 @@ import { drawZiggy, ZIGGY_BOX } from './ziggy.js';
 import { Walker, Stroll, seatNear, napSeat } from './walk.js';
 import { INKS, pairKey, pairFromKey, newCode, isCode, cleanName } from './pair.js';
 import { PairLink } from './together.js';
+import qrcode from './vendor/qrcode.js';
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -43,7 +44,7 @@ function show(name) {
   if (name !== 'home') homeCat?.hide();
   if (name === 'home') { renderHome(); homeCat?.enter(); if (updateReady) location.reload(); }
 }
-const modalOpen = () => ['welcome', 'how', 'settings', 'menu', 'install', 'gift', 'together'].some((m) => !$(m).classList.contains('hidden'));
+const modalOpen = () => ['welcome', 'how', 'settings', 'menu', 'install', 'gift', 'together', 'pair-qr'].some((m) => !$(m).classList.contains('hidden'));
 
 // --- the cast, drawn small ------------------------------------------------------------------
 function face(canvas, who, px) {
@@ -892,8 +893,12 @@ function applyView(v, first = false) {
     if (!first || had) say('ziggy', `${other.name}'s here. Your numbers are ${INK_NAMES[P.seat - 1]}; ${other.name}'s are ${INK_NAMES[2 - P.seat]}.`);
   } else if (!other) {
     store.savePairing({ code: P.code, key: G.key, partner: null });
-    if (first) say('ziggy', `Waiting for your partner. On their phone: Together, then join with the code ${P.code}. You can start without them.`);
+    if (first) {
+      say('ziggy', `Waiting for your partner: they scan the QR code (tap the code above to see it again), or join with the code ${P.code}. You can start without them.`);
+      showPairQr();
+    }
   }
+  if (other) $('pair-qr').classList.add('hidden');
   if (first && other) say('ziggy', `You're with ${other.name}. Your numbers are ${INK_NAMES[P.seat - 1]}; ${other.name}'s are ${INK_NAMES[2 - P.seat]}.`);
   if (G.sel >= 0 && !G.pending) G.digit = G.values[G.sel] || G.digit;
   pairTitle();
@@ -956,8 +961,56 @@ function pairTitle() {
     s.append(dot, document.createTextNode(p.name));
     who.append(s);
   });
-  if (P.players.length < 2) { const c = el('span'); c.append('Code ', el('span', 'pair-code', P.code)); who.append(c); }
+  if (P.players.length < 2) {
+    // the code: tap it for the QR code again
+    const c = el('span');
+    const b = el('button', 'pair-code', P.code);
+    b.setAttribute('aria-label', `Code ${P.code}: show the QR code`);
+    b.onclick = () => showPairQr();
+    c.append('Code ', b);
+    who.append(c);
+  }
   sub.append(who);
+}
+
+// --- Together's QR code -----------------------------------------------------------------------
+// The other phone scans it with its camera: the link opens the game and joins the grid.
+const joinCode = (() => { const c = (params.get('join') || '').toUpperCase(); return isCode(c) ? c : null; })();
+const joinLink = (code) => `${location.origin}/?join=${code}`;
+
+function drawQr(canvas, text, px) {
+  const qr = qrcode(0, 'M');
+  qr.addData(text);
+  qr.make();
+  const n = qr.getModuleCount();
+  const quiet = 3; // the white margin a camera needs
+  const cell = Math.floor(px / (n + quiet * 2));
+  const size = cell * (n + quiet * 2);
+  canvas.width = size * DPR; canvas.height = size * DPR;
+  canvas.style.width = `${size}px`; canvas.style.height = `${size}px`;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = '#1b1814';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) ctx.fillRect((c + quiet) * cell, (r + quiet) * cell, cell, cell);
+}
+
+function showPairQr() {
+  if (!G?.pair) return;
+  drawQr($('qr-canvas'), joinLink(G.pair.code), Math.min(260, innerWidth - 110, Math.round(innerHeight * 0.36)));
+  $('qr-code').textContent = G.pair.code;
+  $('pair-qr').classList.remove('hidden');
+  tel.log('pair-qr', {});
+}
+$('qr-close').onclick = () => { sound.tap(); $('pair-qr').classList.add('hidden'); };
+
+// opened from the QR code: join with the name this phone used before, or ask for one
+function joinFromLink() {
+  tel.log('pair-join-link', { named: !!store.myName() });
+  openTogether();
+  $('tg-code').value = joinCode;
+  if (cleanName($('tg-name').value)) connectPair({ code: joinCode });
+  else { $('tg-msg').textContent = 'Pop your name in, then tap Join.'; $('tg-name').focus(); }
 }
 
 function finishPair(v) {
@@ -1483,7 +1536,7 @@ function offerHandoff() {
 }
 function tidyUrl() {
   const p = new URLSearchParams(location.search);
-  for (const k of ['card', 'family', 'gift', 'carry', 'famhandoff']) p.delete(k);
+  for (const k of ['card', 'family', 'gift', 'carry', 'famhandoff', 'join']) p.delete(k);
   const q = p.toString();
   history.replaceState(null, '', location.pathname + (q ? `?${q}` : '') + location.hash);
 }
@@ -1571,6 +1624,7 @@ let started = false;
 function afterStart() {
   if (started) return;
   started = true;
+  if (joinCode && screen === 'home') { joinFromLink(); return; }
   if (!store.inducted() && screen === 'home') $('welcome').classList.remove('hidden');
 }
 
