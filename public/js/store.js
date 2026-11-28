@@ -104,6 +104,11 @@ export function pairId() {
   if (!id) { id = `p${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`; set(K.pid, id); }
   return id;
 }
-/** The Together grid this phone is part of, if it isn't finished: { code, key, at }. */
+/** The Together grid this phone is part of, if it isn't finished: { code, key, partner, at }. */
 export const pairing = () => json(K.pairing, null);
-export const savePairing = (p) => (p ? set(K.pairing, JSON.stringify(p)) : (() => { try { localStorage.removeItem(K.pairing); } catch { /* fine */ } })());
+export const savePairing = (p) => (p ? set(K.pairing, JSON.stringify({ ...p, at: Date.now() })) : (() => { try { localStorage.removeItem(K.pairing); } catch { /* fine */ } })());
+// The room clears itself out two days after it was last used (src/pair-room.js), so the phone
+// forgets the grid then too, rather than showing "carry on" for a grid that's gone.
+export const PAIR_KEEP_MS = 2 * 24 * 3600 * 1000;
+/** Whether a remembered Together grid is old enough that its room has gone. */
+export const stalePairing = (p, now = Date.now()) => !!p && Number.isFinite(p.at) && now - p.at > PAIR_KEEP_MS;

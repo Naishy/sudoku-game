@@ -129,3 +129,13 @@ test('finishing together, and the room\'s game survives being saved', () => {
   const hands = g.view().by;
   assert.ok(hands.includes('1') && hands.includes('2'));
 });
+
+test('a Together grid is forgotten on the phone once its room would have gone (two days unused)', async () => {
+  const { stalePairing, PAIR_KEEP_MS } = await import('../public/js/store.js');
+  const now = Date.UTC(2026, 11, 3, 12);
+  assert.equal(stalePairing(null, now), false);
+  assert.equal(stalePairing({ code: 'ABCD', key: 'ps1', at: now - 3600e3 }, now), false, 'an hour ago: still there');
+  assert.equal(stalePairing({ code: 'ABCD', key: 'ps1', at: now - PAIR_KEEP_MS + 60e3 }, now), false, 'just under two days');
+  assert.equal(stalePairing({ code: 'ABCD', key: 'ps1', at: now - PAIR_KEEP_MS - 60e3 }, now), true, 'over two days: gone');
+  assert.equal(stalePairing({ code: 'ABCD', key: 'ps1' }, now), false, 'no date yet (from before): kept, and dated on the home page');
+});
